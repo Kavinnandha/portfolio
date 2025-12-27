@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import CustomCursor from './components/CustomCursor'
 import Hero from './components/Hero'
 import About from './components/About'
@@ -21,6 +22,7 @@ function App() {
       <Contact />
       <ScrollToTop />
       <FloatingNext isModalOpen={isModalOpen} />
+      <Analytics />
     </div>
   )
 }
