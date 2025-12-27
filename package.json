@@ -13,6 +13,7 @@
     "@emailjs/browser": "^4.4.1",
     "@fortawesome/fontawesome-free": "^7.0.0",
     "@tailwindcss/vite": "^4.1.11",
+    "@vercel/analytics": "^1.4.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tailwindcss": "^4.1.11"
