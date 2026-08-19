@@ -117,47 +117,58 @@ export default function Home() {
         <section id="top" className="hero">
           <HeroBackdrop />
 
-          <div className="hero-eyebrow">
-            <span className="hero-dot" />
-            <span>Cloud / DevOps engineer</span>
-            <span className="hero-place">Coimbatore, IN</span>
+          <div className="hero-inner">
+            <div className="hero-eyebrow">
+              <span className="hero-dot" />
+              <span>Cloud / DevOps engineer</span>
+              <span className="hero-place">Coimbatore, IN</span>
+            </div>
+
+            <h1 className="hero-title">
+              <TextMask
+                delay={0.75}
+                lines={["Production", "infrastructure,", "owned end to end."]}
+                lineClassNames={[undefined, undefined, "accent"]}
+              />
+            </h1>
+
+            <p className="hero-lede">
+              I run a bare-metal Kubernetes (k3s) cluster serving 1,000+ concurrent users, a
+              self-hosted Cloudflare Zero Trust edge, and the CI/CD that ships to both. Container
+              orchestration, DNS and SSL, networking, observability — I own the whole path from commit
+              to production.
+            </p>
+
+            <div className="hero-actions">
+              <Magnetic>
+                <a className="btn btn-primary" href="#work">
+                  Selected work
+                </a>
+              </Magnetic>
+              <Magnetic>
+                <a className="btn btn-secondary" href="mailto:kavinnandhakavin@gmail.com">
+                  kavinnandhakavin@gmail.com
+                </a>
+              </Magnetic>
+              <Magnetic strength={10}>
+                <a
+                  className="btn btn-ghost"
+                  href="https://kavinweb.info"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  kavinweb.info
+                </a>
+              </Magnetic>
+            </div>
           </div>
 
-          <h1 className="hero-title">
-            <TextMask
-              delay={0.75}
-              lines={["Production", "infrastructure,", "owned end to end."]}
-              lineClassNames={[undefined, undefined, "accent"]}
-            />
-          </h1>
-
-          <p className="hero-lede">
-            I run a bare-metal Kubernetes (k3s) cluster serving 1,000+ concurrent users, a self-hosted
-            Cloudflare Zero Trust edge, and the CI/CD that ships to both. Container orchestration, DNS
-            and SSL, networking, observability — I own the whole path from commit to production.
-          </p>
-
-          <div className="hero-actions">
-            <Magnetic>
-              <a className="btn btn-primary" href="#work">
-                Selected work
-              </a>
-            </Magnetic>
-            <Magnetic>
-              <a className="btn btn-secondary" href="mailto:kavinnandhakavin@gmail.com">
-                kavinnandhakavin@gmail.com
-              </a>
-            </Magnetic>
-            <Magnetic strength={10}>
-              <a className="btn btn-ghost" href="https://kavinweb.info" target="_blank" rel="noopener">
-                kavinweb.info
-              </a>
-            </Magnetic>
-          </div>
-
-          <div className="hero-scroll">
-            <span>Scroll</span>
-            <span className="rule-in" />
+          <div className="hero-foot">
+            <div className="hero-scroll">
+              <span>Scroll</span>
+              <span className="scrollpulse" />
+            </div>
+            <span className="hero-load">k3s · 1,000+ concurrent</span>
           </div>
         </section>
 

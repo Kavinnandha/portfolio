@@ -311,12 +311,26 @@ textarea.input {
 
 /* — motion — the hero line reveal is a Motion component now; only the static
    scroll-cue rule is still driven by a keyframe. — */
-@keyframes ruleIn {
-  from {
+
+/* Wipes in from the left, then out to the right, so the rule reads as a
+   direction of travel rather than a bar that merely grows. Flipping
+   `transform-origin` at the midpoint is what turns one scale into two moves. */
+@keyframes scrollpulse {
+  0% {
     transform: scaleX(0);
+    transform-origin: left;
   }
-  to {
+  45% {
     transform: scaleX(1);
+    transform-origin: left;
+  }
+  55% {
+    transform: scaleX(1);
+    transform-origin: right;
+  }
+  100% {
+    transform: scaleX(0);
+    transform-origin: right;
   }
 }
 
@@ -331,13 +345,13 @@ textarea.input {
   display: block;
 }
 
-.rule-in {
+.scrollpulse {
   display: block;
   width: 64px;
   height: 2px;
   background: var(--color-divider);
   transform-origin: left;
-  animation: ruleIn 1s cubic-bezier(0.16, 1, 0.3, 1) 0.6s both;
+  animation: scrollpulse 2.6s cubic-bezier(0.65, 0, 0.35, 1) 0.6s infinite;
 }
 
 /* Section entrances are owned by Motion now — see components/motion/Reveal.tsx.
@@ -457,10 +471,46 @@ textarea.input {
 }
 
 /* — hero — */
+/* Full-bleed so the canvas backdrop runs edge to edge; the measure is held by
+   `.hero-inner` instead. `isolation` gives the backdrop a stacking context of
+   its own, so `z-index: 0` on the canvas cannot reach past the section. */
 .hero {
+  position: relative;
+  isolation: isolate;
+  /* The grid deliberately runs past the section edges. */
+  overflow: hidden;
+  min-height: min(94vh, 940px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.hero-inner {
+  position: relative;
+  z-index: 1;
+  width: 100%;
   max-width: var(--measure);
   margin: 0 auto;
-  padding: clamp(48px, 9vh, 112px) var(--gutter) 56px;
+  /* The generous bottom is what reserves room for the absolutely-positioned
+     `.hero-foot` — without it the readout would sit on top of the buttons. */
+  padding: clamp(56px, 9vh, 112px) var(--gutter) clamp(72px, 12vh, 132px);
+}
+
+/* Pinned to the floor of the hero rather than flowed after the buttons, so the
+   scroll cue lands on the fold whatever the headline wraps to. */
+.hero-foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 0 var(--gutter) 24px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
 }
 
 .hero-eyebrow {
@@ -518,11 +568,21 @@ textarea.input {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  margin-top: 56px;
   font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: color-mix(in srgb, var(--color-text) 60%, transparent);
+}
+
+/* The standing readout on the right of the fold — the one number the whole
+   page is arguing for, stated before the reader has scrolled at all. */
+.hero-load {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-text) 45%, transparent);
+  font-feature-settings: "tnum" 1;
+  text-align: right;
 }
 
 /* — stats — */
@@ -1297,8 +1357,8 @@ body {
     margin-left: auto;
   }
 
-  .hero {
-    padding-bottom: 44px;
+  .hero-inner {
+    padding-bottom: clamp(64px, 10vh, 96px);
   }
 }
 
@@ -1372,6 +1432,12 @@ body {
     gap: var(--space-2) var(--space-3);
   }
 
+  /* Two labels do not fit one line at this width, and the readout is the one
+     the reader meets again in the stats a screen later. */
+  .hero-load {
+    display: none;
+  }
+
   .footer {
     gap: var(--space-3);
   }
@@ -1383,13 +1449,14 @@ body {
 
 /* — phone in landscape: the hero must not eat the whole viewport — */
 @media (max-height: 520px) and (orientation: landscape) {
+  /* `min-height` is what would trap the reader here, not the padding. */
   .hero {
-    padding-top: 32px;
-    padding-bottom: 32px;
+    min-height: 0;
   }
 
-  .hero-scroll {
-    margin-top: 28px;
+  .hero-inner {
+    padding-top: 32px;
+    padding-bottom: 56px;
   }
 
   .nav-drawer {
@@ -1408,7 +1475,7 @@ body {
     scroll-behavior: auto;
   }
 
-  .rule-in,
+  .scrollpulse,
   .marquee-track {
     animation: none !important;
     transform: none !important;
@@ -1449,337 +1516,40 @@ body {
 /* ══════════════════════════════════════════════════════════════════════════
    Hero ambient backdrop — the one loop that never stops.
 
-   Modelled on jeton.com. Their hero is a looping MP4 of a pre-rendered 3D coin
-   animation over a solid orange field; that asset cannot be reproduced in CSS,
-   so this rebuilds the technique instead — discs tumbling in real 3D space,
-   each a circle flattened into an ellipse by `rotateX` the way a physical coin
-   is, drifting through a warm gradient field.
+   A canvas network diagram: a grid of hairlines for the fabric, packets
+   running the lanes, and a single accent block roaming the intersections like
+   a scheduler placing work. The grid brightens near the pointer, so the
+   surface answers the reader without anything having to light up on hover.
 
-   Two nested layers per coin with independent, non-dividing periods: the outer
-   drifts, the inner tumbles. That is what stops a short loop from reading as a
-   loop.
-
-   Softness comes from gradient falloff, never `filter: blur()`, which would
-   cost a full-viewport offscreen buffer every frame for the life of the page.
+   Drawing lives in HeroBackdrop.tsx. Everything here is placement and the
+   mask — the geometry is canvas, not CSS, precisely so the whole composition
+   costs one composited layer instead of ~80 transformed elements.
    ══════════════════════════════════════════════════════════════════════ */
 
-.hero {
-  position: relative;
-  isolation: isolate;
-  /* The drifting layers deliberately run past the section edges; this is what
-     keeps them from ever widening the page. */
-  overflow: hidden;
-}
-
-.hero > *:not(.hero-backdrop) {
-  position: relative;
-  z-index: 1;
-}
-
-.hero-backdrop {
+.hero-canvas {
   position: absolute;
   inset: 0;
   z-index: 0;
-  overflow: hidden;
+  display: block;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
-  /* Fade the whole composition out under the headline column. */
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, transparent 18%, #000 56%, #000 100%);
-  mask-image: linear-gradient(to right, transparent 0%, transparent 18%, #000 56%, #000 100%);
-}
-
-/* — the warm field — */
-.hero-field {
-  position: absolute;
-  inset: -30%;
-  background:
-    radial-gradient(
-      34% 40% at 74% 26%,
-      color-mix(in srgb, var(--color-accent) 32%, transparent) 0%,
-      transparent 70%
-    ),
-    radial-gradient(
-      30% 36% at 92% 58%,
-      color-mix(in srgb, var(--color-accent-500) 28%, transparent) 0%,
-      transparent 72%
-    ),
-    radial-gradient(
-      28% 32% at 62% 78%,
-      color-mix(in srgb, var(--color-accent-300) 46%, transparent) 0%,
-      transparent 74%
-    );
-  animation: fieldDrift 24s ease-in-out infinite;
-  will-change: transform;
-}
-
-@keyframes fieldDrift {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  33% {
-    transform: translate3d(-6%, 5%, 0) scale(1.14);
-  }
-  66% {
-    transform: translate3d(5%, -4%, 0) scale(1.07);
-  }
-}
-
-/* — a breathing highlight, so the field is never quite still — */
-.hero-glow {
-  position: absolute;
-  top: -20%;
-  right: -10%;
-  width: 70%;
-  height: 120%;
-  background: radial-gradient(
-    50% 50% at 50% 50%,
-    color-mix(in srgb, var(--color-accent-200) 62%, transparent) 0%,
-    transparent 68%
+  /* Clears the headline column outright and fades in across the empty right
+     of the hero, so the grid never competes with the type for contrast. */
+  -webkit-mask-image: radial-gradient(
+    120% 92% at 6% 46%,
+    transparent 0%,
+    transparent 30%,
+    rgba(0, 0, 0, 0.45) 52%,
+    #000 78%
   );
-  animation: glowBreathe 17s ease-in-out infinite;
-  will-change: transform, opacity;
-}
-
-@keyframes glowBreathe {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-    opacity: 0.5;
-  }
-  50% {
-    transform: translate3d(-8%, 6%, 0) scale(1.24);
-    opacity: 0.95;
-  }
-}
-
-/* — the 3D stage the coins tumble in — */
-.hero-stage {
-  position: absolute;
-  inset: 0;
-  perspective: 1100px;
-  transform-style: preserve-3d;
-}
-
-/* Outer layer: drift and depth. */
-.hero-coin {
-  position: absolute;
-  display: block;
-  transform-style: preserve-3d;
-  will-change: transform;
-}
-
-/* Inner layer: the tumble. A full 360deg of `rotateZ` per cycle loops with no
-   seam, while `rotateX` oscillates so the coin opens toward the viewer and
-   flattens back to an edge-on ellipse. */
-.hero-coin-face {
-  position: absolute;
-  inset: 0;
-  display: block;
-  border-radius: 50%;
-  transform-style: preserve-3d;
-  will-change: transform;
-  background: linear-gradient(
-    148deg,
-    color-mix(in srgb, var(--color-accent-200) 94%, transparent) 0%,
-    color-mix(in srgb, var(--color-accent-400) 78%, transparent) 46%,
-    color-mix(in srgb, var(--color-accent-600) 56%, transparent) 100%
+  mask-image: radial-gradient(
+    120% 92% at 6% 46%,
+    transparent 0%,
+    transparent 30%,
+    rgba(0, 0, 0, 0.45) 52%,
+    #000 78%
   );
-  box-shadow: 0 34px 60px color-mix(in srgb, var(--color-accent-800) 16%, transparent);
-}
-
-/* The underside, pushed back in Z so the tilt reveals real thickness. */
-.hero-coin-face::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: linear-gradient(
-    148deg,
-    color-mix(in srgb, var(--color-accent-500) 72%, transparent) 0%,
-    color-mix(in srgb, var(--color-accent-700) 58%, transparent) 100%
-  );
-  transform: translateZ(-14px);
-}
-
-.hero-coin-1 {
-  width: clamp(190px, 25vw, 400px);
-  aspect-ratio: 1;
-  top: 6%;
-  right: 8%;
-  animation: coinDrift1 21s ease-in-out infinite;
-}
-
-.hero-coin-1 .hero-coin-face {
-  animation: coinTumble1 17s linear infinite;
-}
-
-.hero-coin-2 {
-  width: clamp(140px, 19vw, 310px);
-  aspect-ratio: 1;
-  top: 33%;
-  right: 26%;
-  animation: coinDrift2 27s ease-in-out infinite;
-}
-
-.hero-coin-2 .hero-coin-face {
-  animation: coinTumble2 23s linear infinite;
-}
-
-.hero-coin-3 {
-  width: clamp(110px, 15vw, 250px);
-  aspect-ratio: 1;
-  bottom: 8%;
-  right: 14%;
-  animation: coinDrift3 24s ease-in-out infinite;
-}
-
-.hero-coin-3 .hero-coin-face {
-  animation: coinTumble3 19s linear infinite;
-}
-
-.hero-coin-4 {
-  width: clamp(80px, 11vw, 180px);
-  aspect-ratio: 1;
-  top: 58%;
-  right: 38%;
-  animation: coinDrift4 30s ease-in-out infinite;
-}
-
-.hero-coin-4 .hero-coin-face {
-  animation: coinTumble4 26s linear infinite;
-}
-
-.hero-coin-5 {
-  width: clamp(60px, 8vw, 130px);
-  aspect-ratio: 1;
-  top: 16%;
-  right: 40%;
-  animation: coinDrift5 18s ease-in-out infinite;
-}
-
-.hero-coin-5 .hero-coin-face {
-  animation: coinTumble5 14s linear infinite;
-}
-
-/* Drift — large enough to actually be seen. The previous pass moved these
-   ~26px over 30s, roughly 1px per second, which reads as a static image. */
-@keyframes coinDrift1 {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(-120px, 150px, 0) scale(1.12);
-  }
-}
-
-@keyframes coinDrift2 {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(160px, -130px, 0) scale(0.86);
-  }
-}
-
-@keyframes coinDrift3 {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(-140px, -110px, 0) scale(1.18);
-  }
-}
-
-@keyframes coinDrift4 {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(120px, 140px, 0) scale(0.9);
-  }
-}
-
-@keyframes coinDrift5 {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(-100px, 120px, 0) scale(1.22);
-  }
-}
-
-/* Tumble — a full turn per cycle so the loop closes on itself, with the tilt
-   opening and shutting on the way round. */
-@keyframes coinTumble1 {
-  0% {
-    transform: rotateX(66deg) rotateZ(0deg);
-  }
-  50% {
-    transform: rotateX(34deg) rotateZ(180deg);
-  }
-  100% {
-    transform: rotateX(66deg) rotateZ(360deg);
-  }
-}
-
-@keyframes coinTumble2 {
-  0% {
-    transform: rotateX(58deg) rotateZ(360deg);
-  }
-  50% {
-    transform: rotateX(24deg) rotateZ(180deg);
-  }
-  100% {
-    transform: rotateX(58deg) rotateZ(0deg);
-  }
-}
-
-@keyframes coinTumble3 {
-  0% {
-    transform: rotateX(72deg) rotateZ(0deg);
-  }
-  50% {
-    transform: rotateX(40deg) rotateZ(180deg);
-  }
-  100% {
-    transform: rotateX(72deg) rotateZ(360deg);
-  }
-}
-
-@keyframes coinTumble4 {
-  0% {
-    transform: rotateX(50deg) rotateZ(0deg);
-  }
-  50% {
-    transform: rotateX(18deg) rotateZ(180deg);
-  }
-  100% {
-    transform: rotateX(50deg) rotateZ(360deg);
-  }
-}
-
-@keyframes coinTumble5 {
-  0% {
-    transform: rotateX(64deg) rotateZ(360deg);
-  }
-  50% {
-    transform: rotateX(30deg) rotateZ(180deg);
-  }
-  100% {
-    transform: rotateX(64deg) rotateZ(0deg);
-  }
-}
-
-/* Parked by the IntersectionObserver in HeroBackdrop.tsx once the hero leaves
-   the viewport, and whenever the tab is in the background. */
-.hero-backdrop.is-paused *,
-.hero-backdrop.is-paused *::after {
-  animation-play-state: paused;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
