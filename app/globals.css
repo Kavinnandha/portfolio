@@ -309,16 +309,8 @@ textarea.input {
    Page — the portfolio itself, built from the tokens above.
    ══════════════════════════════════════════════════════════════════════ */
 
-/* — motion — */
-@keyframes lineup {
-  from {
-    transform: translateY(105%);
-  }
-  to {
-    transform: translateY(0);
-  }
-}
-
+/* — motion — the hero line reveal is a Motion component now; only the static
+   scroll-cue rule is still driven by a keyframe. — */
 @keyframes ruleIn {
   from {
     transform: scaleX(0);
@@ -328,9 +320,15 @@ textarea.input {
   }
 }
 
-.lineup {
+/* Line masks for the hero and the contact statement. The clip lives on the
+   wrapper so the moving child can travel its full height and still be cut. */
+.mask-line {
   display: block;
-  animation: lineup 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  overflow: hidden;
+}
+
+.mask-line > span {
+  display: block;
 }
 
 .rule-in {
@@ -342,18 +340,8 @@ textarea.input {
   animation: ruleIn 1s cubic-bezier(0.16, 1, 0.3, 1) 0.6s both;
 }
 
-.reveal {
-  opacity: 0;
-  transform: translateY(18px);
-  transition:
-    opacity 0.7s ease,
-    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.reveal.is-visible {
-  opacity: 1;
-  transform: none;
-}
+/* Section entrances are owned by Motion now — see components/motion/Reveal.tsx.
+   Nothing here should set an opacity that JavaScript then has to fight. */
 
 /* — scroll progress — */
 .progress-track {
@@ -368,8 +356,11 @@ textarea.input {
 
 .progress-bar {
   height: 3px;
-  width: 0%;
+  width: 100%;
   background: var(--color-accent);
+  /* Scaled, not resized — keeps the bar off the layout path entirely. */
+  transform: scaleX(0);
+  transform-origin: 0 50%;
 }
 
 /* — nav — */
@@ -502,11 +493,6 @@ textarea.input {
   line-height: 1.04;
   letter-spacing: -0.03em;
   margin: 28px 0 0 -0.058em;
-}
-
-.hero-title .line {
-  display: block;
-  overflow: hidden;
 }
 
 .hero-title .accent {
@@ -658,40 +644,6 @@ textarea.input {
   border-left: 2px solid var(--color-accent);
 }
 
-/* — selected work, bento grid — */
-.bento {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 2px;
-  background: var(--color-divider);
-}
-
-.bento-card {
-  background: var(--color-bg);
-  padding: clamp(24px, 3vw, 40px);
-  display: flex;
-  flex-direction: column;
-  min-height: 280px;
-  transition:
-    background 0.35s ease,
-    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.bento-card.span-2 {
-  grid-column: span 2;
-}
-
-.bento-card.span-4 {
-  grid-column: span 4;
-  min-height: 320px;
-}
-
-.bento-card.invert {
-  background: var(--color-text);
-  color: var(--color-bg);
-  min-height: 320px;
-}
-
 .bento-index {
   display: flex;
   align-items: baseline;
@@ -708,14 +660,6 @@ textarea.input {
 
 .bento-index .cat {
   color: color-mix(in srgb, var(--color-text) 60%, transparent);
-}
-
-.bento-card.invert .bento-index .num {
-  color: var(--color-accent-400);
-}
-
-.bento-card.invert .bento-index .cat {
-  color: color-mix(in srgb, var(--color-bg) 65%, transparent);
 }
 
 .bento-h-lg {
@@ -761,11 +705,6 @@ textarea.input {
   color: color-mix(in srgb, var(--color-text) 80%, transparent);
 }
 
-.bento-card.invert .bento-p {
-  margin-top: 16px;
-  color: color-mix(in srgb, var(--color-bg) 82%, transparent);
-}
-
 .bento-tags {
   margin-top: auto;
   padding-top: 24px;
@@ -785,52 +724,6 @@ textarea.input {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: color-mix(in srgb, var(--color-bg) 60%, transparent);
-}
-
-.bento-row {
-  grid-column: span 6;
-  background: var(--color-bg);
-  padding: clamp(20px, 2.4vw, 32px) clamp(24px, 3vw, 40px);
-  display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 5fr) auto;
-  gap: 16px clamp(20px, 4vw, 56px);
-  align-items: baseline;
-  transition: background 0.35s ease;
-}
-
-.bento-row-head {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-3);
-}
-
-.bento-row-head .num {
-  font-size: 13px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-accent);
-  font-feature-settings: "tnum" 1;
-}
-
-.bento-row-head h3 {
-  font-family: var(--font-heading);
-  font-weight: var(--font-heading-weight);
-  font-size: clamp(18px, 1.7vw, 24px);
-  line-height: 1.16;
-  letter-spacing: -0.015em;
-  margin: 0;
-}
-
-.bento-row p {
-  font-size: 15px;
-  line-height: 25px;
-  margin: 0;
-  color: color-mix(in srgb, var(--color-text) 80%, transparent);
-}
-
-.bento-row .meta {
-  font-size: 12px;
-  letter-spacing: 0.08em;
 }
 
 /* — case study — */
@@ -872,7 +765,7 @@ textarea.input {
 }
 
 .toolkit-item {
-  border-top: 2px solid var(--color-divider);
+  position: relative;
   padding: 22px 0 28px;
 }
 
@@ -893,11 +786,11 @@ textarea.input {
 
 /* — record — */
 .record-row {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(120px, 200px) minmax(0, 1fr);
   gap: 0 clamp(24px, 4vw, 72px);
   align-items: baseline;
-  border-top: 2px solid var(--color-divider);
   padding: 28px 0;
 }
 
@@ -987,7 +880,9 @@ textarea.input {
   border-bottom: 2px solid var(--color-divider);
 }
 
-.contact-link:last-child {
+/* The links are each wrapped in a stagger item now, so the last-row rule has
+   to be dropped one level up. */
+.contact-links > *:last-child .contact-link {
   border-bottom: 0;
 }
 
@@ -1063,38 +958,448 @@ textarea.input {
   text-transform: uppercase;
 }
 
-/* ── responsive ─────────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════════
+   Motion layer — the styling the Motion components need in order to move.
+   Everything here is transform/opacity only, so nothing an animation touches
+   can trigger layout.
+   ══════════════════════════════════════════════════════════════════════ */
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* — intro curtain — */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: var(--color-accent);
+  color: var(--color-bg);
+  will-change: transform;
+}
+
+.intro-mark {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: clamp(20px, 4.4vw, 34px);
+  letter-spacing: -0.02em;
+}
+
+/* — pointer-tracking wrapper — */
+.magnetic {
+  display: inline-flex;
+}
+
+/* — scroll-linked word reveal — */
+.scroll-word {
+  display: inline-block;
+  margin-right: 0.25em;
+  will-change: opacity;
+}
+
+/* — self-drawing dividers — */
+.rule {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-divider);
+}
+
+/* — parallax frames — the inner layer is inset past the frame on both edges,
+     so it can travel without ever exposing the ground behind it. — */
+.parallax {
+  position: relative;
+  overflow: hidden;
+}
+
+.parallax-inner {
+  position: absolute;
+  inset: calc(-1 * var(--parallax-bleed, 6%)) 0;
+  will-change: transform;
+}
+
+.parallax-inner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* — marquee — each list carries its own trailing gap, so a -50% translation
+     lands exactly one list-width along and the seam is invisible. — */
+.marquee {
+  --marquee-gap: clamp(28px, 5vw, 64px);
+  overflow: hidden;
+  padding: 16px 0;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+}
+
+.marquee-list {
+  display: flex;
+  align-items: center;
+  gap: var(--marquee-gap);
+  padding: 0 var(--marquee-gap) 0 0;
+  margin: 0;
+  list-style: none;
+}
+
+.marquee-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-text) 72%, transparent);
+}
+
+.marquee-dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  background: var(--color-accent);
+}
+
+/* — nav — */
+.nav {
+  --nav-h: 64px;
+  transition: background 0.4s ease;
+  will-change: transform;
+}
+
+.nav.is-scrolled {
+  background: color-mix(in srgb, var(--color-bg) 94%, transparent);
+}
+
+.nav-links a {
+  position: relative;
+  padding: 6px 0;
+}
+
+.nav-links a.is-active {
+  color: var(--color-accent);
+}
+
+.nav-underline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--color-accent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-links a:hover .nav-underline,
+.nav-links a.is-active .nav-underline {
+  transform: scaleX(1);
+}
+
+.nav-toggle {
+  display: none;
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  padding: 0;
+  cursor: pointer;
+  background: transparent;
+  border: 2px solid var(--color-divider);
+  border-radius: var(--radius-md);
+}
+
+.nav-toggle span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 20px;
+  height: 2px;
+  margin-left: -10px;
+  background: var(--color-text);
+  transition: transform 0.42s cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+.nav-toggle span:nth-child(1) {
+  transform: translateY(-4px);
+}
+
+.nav-toggle span:nth-child(2) {
+  transform: translateY(4px);
+}
+
+.nav-toggle.is-open span:nth-child(1) {
+  transform: rotate(45deg);
+}
+
+.nav-toggle.is-open span:nth-child(2) {
+  transform: rotate(-45deg);
+}
+
+.nav-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow-y: auto;
+  background: var(--color-accent);
+  color: var(--color-bg);
+  padding: calc(84px + env(safe-area-inset-top)) var(--gutter)
+    calc(28px + env(safe-area-inset-bottom));
+}
+
+.nav-drawer-list {
+  list-style: none;
+  margin: auto 0 0;
+  padding: 0;
+}
+
+.nav-drawer-list a {
+  display: block;
+  padding: 10px 0;
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: clamp(30px, 8.5vw, 54px);
+  line-height: 1.06;
+  letter-spacing: -0.03em;
+  color: var(--color-bg);
+}
+
+.nav-drawer-list a:hover {
+  color: var(--color-bg);
+  opacity: 0.72;
+}
+
+.nav-drawer-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 clamp(20px, 5vw, 40px);
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 2px solid color-mix(in srgb, var(--color-bg) 45%, transparent);
+  font-size: 14px;
+}
+
+.nav-drawer-foot a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--color-bg);
+}
+
+body.nav-locked {
+  overflow: hidden;
+}
+
+/* — case study — the spec sheet scrolls while the figure holds position, so
+     the reader keeps the subject in view for the whole table. — */
+.case-figure {
+  position: sticky;
+  top: calc(var(--nav-h, 64px) + 28px);
+}
+
+.case-spec {
+  min-width: 0;
+}
+
+/* — contact form, now that Magnetic wraps the controls — */
+.form-submit {
+  justify-self: start;
+}
+
+.form-sent-action {
+  align-self: flex-start;
+}
+
+.count-anim {
+  display: inline-block;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Responsive — six tiers, from a 320px phone to a wide desktop. Each one only
+   changes what actually breaks at that width.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Nothing may ever scroll the page sideways. `clip` rather than `hidden`, so
+   this does not silently create a scroll container and kill position: sticky. */
+html,
+body {
+  overflow-x: clip;
+}
+
+/* — large desktop: give the sections more air — */
+@media (min-width: 1440px) {
+  .section {
+    padding-block: 88px;
+  }
+}
+
+/* — small desktop / large tablet — */
+@media (max-width: 1200px) {
+  .section {
+    padding-block: 60px;
+  }
+
+  .nav-links {
+    gap: var(--space-4);
+  }
+}
+
+/* — tablet: the page becomes a single column — */
 @media (max-width: 900px) {
-  /* Child selectors, not bare `.bento-card` — the span/invert modifiers carry
-     two classes each, and a media query adds no specificity of its own. */
-  .bento > .bento-card,
-  .bento > .bento-row {
-    grid-column: span 6;
-    min-height: 0;
-  }
 
-  .bento-row {
-    grid-template-columns: 1fr;
-  }
-
+  /* `minmax(0, 1fr)`, never a bare `1fr`. A bare `1fr` is `minmax(auto, 1fr)`,
+     so one unbreakable string — the contact email — can force the track wider
+     than the container and push the column past the viewport edge. */
   .split {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .split-figure {
     order: -1;
   }
 
-  .nav-links {
+  /* Sticky needs scroll distance to be worth anything; in one column there is
+     none, and pinning would just read as stuck. */
+  .case-figure {
+    position: static;
+  }
+
+  .nav-links,
+  .nav-cta {
     display: none;
+  }
+
+  .nav-toggle {
+    display: inline-flex;
+    margin-left: auto;
+  }
+
+  .hero {
+    padding-bottom: 44px;
   }
 }
 
+/* — large phone — */
+@media (max-width: 700px) {
+  .section,
+  .stats {
+    padding-block: 48px;
+  }
+
+  .section-head {
+    margin-bottom: 28px;
+  }
+
+  .contact-inner {
+    padding-block: 56px;
+  }
+
+  .hero-actions .magnetic,
+  .hero-actions .btn {
+    width: 100%;
+  }
+}
+
+/* — touch targets are a property of the input device, not the window width:
+     a 768px tablet needs them as much as a 375px phone — */
+@media (hover: none) {
+  .btn {
+    min-height: 44px;
+  }
+
+  .contact-link {
+    padding: 18px 0;
+  }
+
+  .nav-links a {
+    padding: 12px 0;
+  }
+}
+
+/* — phone — */
 @media (max-width: 620px) {
   .record-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px 0;
+  }
+
+  .case-grid,
+  .record-extra,
+  .toolkit-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pullquote {
+    margin-top: 28px;
+  }
+}
+
+/* — small phone: tighten the gutter so the measure survives — */
+@media (max-width: 420px) {
+  :root {
+    --gutter: 16px;
+  }
+
+  .hero-title {
+    font-size: clamp(34px, 11vw, 44px);
+    margin-left: -0.04em;
+  }
+
+  .hero-eyebrow {
+    gap: var(--space-2) var(--space-3);
+  }
+
+  .footer {
+    gap: var(--space-3);
+  }
+
+  .marquee-item {
+    font-size: 12px;
+  }
+}
+
+/* — phone in landscape: the hero must not eat the whole viewport — */
+@media (max-height: 520px) and (orientation: landscape) {
+  .hero {
+    padding-top: 32px;
+    padding-bottom: 32px;
+  }
+
+  .hero-scroll {
+    margin-top: 28px;
+  }
+
+  .nav-drawer {
+    padding-top: 72px;
+    justify-content: flex-start;
+  }
+
+  .nav-drawer-list a {
+    font-size: clamp(22px, 5vh, 30px);
+    padding: 6px 0;
   }
 }
 
@@ -1103,14 +1408,375 @@ textarea.input {
     scroll-behavior: auto;
   }
 
-  .reveal {
-    opacity: 1 !important;
+  .rule-in,
+  .marquee-track {
+    animation: none !important;
     transform: none !important;
   }
 
-  .lineup,
-  .rule-in {
-    animation: none !important;
+  .nav-underline,
+  .nav-toggle span {
+    transition: none !important;
+  }
+}
+
+/* — long unbreakable strings (the email, the site URL) must be allowed to
+     break rather than set the minimum width of their column — */
+.contact-link {
+  min-width: 0;
+  gap: var(--space-3) var(--space-4);
+}
+
+.contact-link > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.nav-drawer-foot a {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 420px) {
+  .contact-link {
+    flex-wrap: wrap;
+  }
+
+  .contact-link .label {
+    flex-basis: 100%;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Hero ambient backdrop — the one loop that never stops.
+
+   A soft warm field with discs drifting and turning through it. This is a
+   deliberate, requested departure from Modernist's "no radius, no gradient,
+   no decoration" rules, and it is fenced to this backdrop only — nothing else
+   on the page inherits a curve or a gradient from it.
+
+   Weighted to the right and masked out toward the left so the ink-on-light
+   headline keeps full contrast. Softness comes from gradient falloff, not from
+   `filter: blur()`, which would cost a full-viewport offscreen buffer every
+   frame for the life of the page.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.hero {
+  position: relative;
+  isolation: isolate;
+  /* The drifting layers deliberately run past the section edges; this is what
+     keeps them from ever widening the page. */
+  overflow: hidden;
+}
+
+.hero > *:not(.hero-backdrop) {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  /* Fade the whole composition out under the headline column. */
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, transparent 18%, #000 56%, #000 100%);
+  mask-image: linear-gradient(to right, transparent 0%, transparent 18%, #000 56%, #000 100%);
+}
+
+/* — the warm field — */
+.hero-field {
+  position: absolute;
+  inset: -30%;
+  background:
+    radial-gradient(
+      34% 40% at 74% 26%,
+      color-mix(in srgb, var(--color-accent) 32%, transparent) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      30% 36% at 92% 58%,
+      color-mix(in srgb, var(--color-accent-500) 28%, transparent) 0%,
+      transparent 72%
+    ),
+    radial-gradient(
+      28% 32% at 62% 78%,
+      color-mix(in srgb, var(--color-accent-300) 46%, transparent) 0%,
+      transparent 74%
+    );
+  animation: fieldDrift 38s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes fieldDrift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    transform: translate3d(-3%, 2.5%, 0) scale(1.07);
+  }
+  66% {
+    transform: translate3d(2.5%, -2%, 0) scale(1.03);
+  }
+}
+
+/* — a slow breathing highlight, so the field is never quite static — */
+.hero-glow {
+  position: absolute;
+  top: -20%;
+  right: -10%;
+  width: 70%;
+  height: 120%;
+  background: radial-gradient(
+    50% 50% at 50% 50%,
+    color-mix(in srgb, var(--color-accent-200) 62%, transparent) 0%,
+    transparent 68%
+  );
+  animation: glowBreathe 26s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes glowBreathe {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translate3d(-4%, 3%, 0) scale(1.12);
+    opacity: 0.9;
+  }
+}
+
+/* — the discs — */
+.hero-disc {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  will-change: transform;
+}
+
+.hero-disc-1 {
+  width: clamp(200px, 27vw, 460px);
+  aspect-ratio: 1 / 0.4;
+  top: 14%;
+  right: 6%;
+  background: linear-gradient(
+    148deg,
+    color-mix(in srgb, var(--color-accent-200) 92%, transparent) 0%,
+    color-mix(in srgb, var(--color-accent-500) 70%, transparent) 58%,
+    color-mix(in srgb, var(--color-accent-700) 46%, transparent) 100%
+  );
+  box-shadow: 0 40px 70px color-mix(in srgb, var(--color-accent-800) 16%, transparent);
+  animation: disc1 30s ease-in-out infinite;
+}
+
+.hero-disc-2 {
+  width: clamp(150px, 20vw, 340px);
+  aspect-ratio: 1 / 0.36;
+  top: 34%;
+  right: 20%;
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--color-accent-100) 88%, transparent) 0%,
+    color-mix(in srgb, var(--color-accent-400) 66%, transparent) 62%,
+    color-mix(in srgb, var(--color-accent-600) 40%, transparent) 100%
+  );
+  box-shadow: 0 30px 56px color-mix(in srgb, var(--color-accent-800) 14%, transparent);
+  animation: disc2 38s ease-in-out infinite;
+}
+
+.hero-disc-3 {
+  width: clamp(120px, 16vw, 280px);
+  aspect-ratio: 1 / 0.44;
+  bottom: 16%;
+  right: 12%;
+  background: linear-gradient(
+    136deg,
+    color-mix(in srgb, var(--color-accent-300) 84%, transparent) 0%,
+    color-mix(in srgb, var(--color-accent-600) 58%, transparent) 100%
+  );
+  box-shadow: 0 26px 48px color-mix(in srgb, var(--color-accent-800) 14%, transparent);
+  animation: disc3 34s ease-in-out infinite;
+}
+
+.hero-disc-4 {
+  width: clamp(90px, 11vw, 190px);
+  aspect-ratio: 1 / 0.5;
+  top: 60%;
+  right: 34%;
+  background: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--color-accent-100) 80%, transparent) 0%,
+    color-mix(in srgb, var(--color-accent-400) 52%, transparent) 100%
+  );
+  animation: disc4 44s ease-in-out infinite;
+}
+
+/* Each disc keeps its own tilt inside its keyframes — a base `transform` on
+   the element would be overwritten the moment the animation started. */
+@keyframes disc1 {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(-16deg);
+  }
+  50% {
+    transform: translate3d(-26px, 34px, 0) rotate(-9deg);
+  }
+}
+
+@keyframes disc2 {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(-24deg);
+  }
+  50% {
+    transform: translate3d(34px, -30px, 0) rotate(-31deg);
+  }
+}
+
+@keyframes disc3 {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(12deg);
+  }
+  50% {
+    transform: translate3d(-30px, -24px, 0) rotate(19deg);
+  }
+}
+
+@keyframes disc4 {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(-6deg);
+  }
+  50% {
+    transform: translate3d(22px, 28px, 0) rotate(2deg);
+  }
+}
+
+/* Parked by the IntersectionObserver in HeroBackdrop.tsx once the hero leaves
+   the viewport, and whenever the tab is in the background. */
+.hero-backdrop.is-paused * {
+  animation-play-state: paused;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Selected work — scroll-driven card deck.
+   Each card pins slightly lower than the one before it, so the previous card
+   stays as a thin ledge while the next covers it. Scale and dim come from
+   Motion (CardStack.tsx); the pinning and the ledge spacing are pure CSS.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.stack {
+  --stack-top: calc(var(--nav-h, 64px) + 28px);
+  --stack-step: 14px;
+  position: relative;
+}
+
+.stack-slot {
+  position: sticky;
+  top: calc(var(--stack-top) + var(--i) * var(--stack-step));
+}
+
+.stack-slot + .stack-slot {
+  margin-top: 28px;
+}
+
+.stack-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: min(560px, 64vh);
+  padding: clamp(24px, 3.2vw, 48px);
+  background: var(--color-bg);
+  border: 2px solid var(--color-divider);
+  /* Cards recede from the top edge, so the ledge stays put while the body
+     shrinks away underneath the incoming card. */
+  transform-origin: top center;
+  will-change: transform, opacity;
+}
+
+.stack-card .bento-tags,
+.stack-card .bento-when {
+  margin-top: auto;
+}
+
+/* The dim for a covered card. A sheet of the page ground laid over an opaque
+   card — never `opacity` on the card itself, which would make it translucent
+   and let every card underneath read through it at once. */
+.stack-veil {
+  position: absolute;
+  inset: 0;
+  background: var(--color-bg);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.stack-card.invert {
+  background: var(--color-text);
+  color: var(--color-bg);
+  border-color: var(--color-text);
+}
+
+.stack-card.invert .bento-index .num {
+  color: var(--color-accent-400);
+}
+
+.stack-card.invert .bento-index .cat {
+  color: color-mix(in srgb, var(--color-bg) 65%, transparent);
+}
+
+.stack-card.invert .bento-p {
+  margin-top: 16px;
+  color: color-mix(in srgb, var(--color-bg) 82%, transparent);
+}
+
+/* Below the tablet breakpoint the deck flattens into a plain list. There is
+   not enough screen height for a pinned card to read as pinned rather than
+   stuck, and a card taller than the viewport cannot stick correctly at all.
+   `!important` because Motion writes scale and opacity as inline styles. */
+@media (max-width: 900px) {
+  .stack-slot {
+    position: static;
+  }
+
+  .stack-card {
+    min-height: 0;
     transform: none !important;
+  }
+
+  /* No card is ever covered once the deck is flat, so nothing may be dimmed. */
+  .stack-veil {
+    opacity: 0 !important;
+  }
+}
+
+@media (max-width: 700px) {
+  /* On a phone the hero is nearly all headline — the composition sits behind
+     the type instead of beside it, so it has to pull right back. */
+  .hero-disc-4 {
+    display: none;
+  }
+
+  .hero-backdrop {
+    opacity: 0.55;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 46%);
+    mask-image: linear-gradient(to bottom, transparent 0%, #000 46%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-backdrop * {
+    animation: none !important;
+  }
+
+  .stack-card {
+    transform: none !important;
+  }
+
+  .stack-veil {
+    opacity: 0 !important;
   }
 }
