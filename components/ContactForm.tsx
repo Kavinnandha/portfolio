@@ -20,7 +20,8 @@ export default function ContactForm() {
     const msg = (msgRef.current?.value ?? "").trim();
 
     if (!name) return setError("A name helps — even a first name.");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return setError("That email address does not look right.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email))
+      return setError("That email address does not look right.");
     if (msg.length < 8) return setError("Tell me a little more than that.");
 
     setError("");
@@ -50,86 +51,84 @@ export default function ContactForm() {
     transition: { duration: reduced ? 0 : 0.45, ease: EASE_OUT },
   };
 
+  if (sent) {
+    return (
+      <motion.div className="form-sent" {...panel}>
+        <span className="form-sent-mark" aria-hidden="true">
+          ✓
+        </span>
+        <h3>That reached me.</h3>
+        <p>I reply within a day, usually sooner. Urgent? The phone number works too.</p>
+        <Magnetic strength={7}>
+          <button type="button" className="btn btn-quiet" onClick={reset}>
+            Send another
+          </button>
+        </Magnetic>
+      </motion.div>
+    );
+  }
+
   return (
-    <>
-      {sent ? (
-        <motion.div key="sent" className="form-sent" {...panel}>
-          <span className="kicker-sm" style={{ marginBottom: 16 }}>
-            Sent
-          </span>
-          <h3>Thanks — that reached me.</h3>
-          <p>
-            I reply within a day, usually sooner. If it is urgent, the phone number to the left works
-            too.
-          </p>
-          <Magnetic strength={10} className="form-sent-action">
-            <button type="button" className="btn btn-secondary" onClick={reset}>
-              Send another
-            </button>
-          </Magnetic>
-        </motion.div>
-      ) : (
-        <motion.form key="form" className="contact-form" onSubmit={submit} noValidate {...panel}>
-          <span className="kicker-sm" style={{ marginBottom: 0 }}>
-            Or send a note
-          </span>
-          <div className="field">
-            <label htmlFor="cf-name">Name</label>
-            <input
-              className="input"
-              id="cf-name"
-              name="name"
-              type="text"
-              ref={nameRef}
-              autoComplete="name"
-              placeholder="Your name"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="cf-email">Email</label>
-            <input
-              className="input"
-              id="cf-email"
-              name="email"
-              type="email"
-              inputMode="email"
-              ref={emailRef}
-              autoComplete="email"
-              placeholder="you@company.com"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="cf-msg">What do you need built or kept running?</label>
-            <textarea
-              className="input"
-              id="cf-msg"
-              name="message"
-              rows={4}
-              ref={msgRef}
-              placeholder="A sentence is enough."
-            />
-          </div>
+    <motion.form className="contact-form" onSubmit={submit} noValidate {...panel}>
+      <p className="form-title">Send a note</p>
 
-          {error ? (
-            <motion.p
-              key={error}
-              role="alert"
-              className="form-error"
-              initial={{ opacity: 0, y: reduced ? 0 : -6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: reduced ? 0 : 0.3, ease: EASE_OUT }}
-            >
-              {error}
-            </motion.p>
-          ) : null}
+      <label className="field" htmlFor="v2-name">
+        Name
+        <input
+          className="input"
+          id="v2-name"
+          name="name"
+          type="text"
+          ref={nameRef}
+          autoComplete="name"
+          placeholder="Your name"
+        />
+      </label>
 
-          <Magnetic strength={12} className="form-submit">
-            <button type="submit" className="btn btn-primary">
-              Send it
-            </button>
-          </Magnetic>
-        </motion.form>
-      )}
-    </>
+      <label className="field" htmlFor="v2-email">
+        Email
+        <input
+          className="input"
+          id="v2-email"
+          name="email"
+          type="email"
+          inputMode="email"
+          ref={emailRef}
+          autoComplete="email"
+          placeholder="you@company.com"
+        />
+      </label>
+
+      <label className="field" htmlFor="v2-msg">
+        What needs building or keeping alive?
+        <textarea
+          className="input"
+          id="v2-msg"
+          name="message"
+          rows={4}
+          ref={msgRef}
+          placeholder="A sentence is enough."
+        />
+      </label>
+
+      {error ? (
+        <motion.p
+          key={error}
+          role="alert"
+          className="form-error"
+          initial={{ opacity: 0, y: reduced ? 0 : -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: reduced ? 0 : 0.3, ease: EASE_OUT }}
+        >
+          {error}
+        </motion.p>
+      ) : null}
+
+      <Magnetic strength={7} className="form-submit">
+        <button type="submit" className="btn btn-accent">
+          Send it <span aria-hidden="true">→</span>
+        </button>
+      </Magnetic>
+    </motion.form>
   );
 }

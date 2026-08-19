@@ -18,9 +18,9 @@ export default function BackToTop() {
   };
 
   return (
-    <Magnetic strength={10}>
-      <button type="button" className="btn btn-ghost" onClick={toTop}>
-        Back to top ↑
+    <Magnetic strength={7}>
+      <button type="button" className="btn btn-quiet" onClick={toTop}>
+        Back to top <span aria-hidden="true">↑</span>
       </button>
     </Magnetic>
   );

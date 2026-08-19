@@ -154,31 +154,3 @@ export function RevealItem({
     </C>
   );
 }
-
-/**
- * A 2px rule that draws itself left-to-right. Modernist organises the page
- * with dividers, so animating the divider is the most on-system motion the
- * design can carry — it animates the structure, not a decoration.
- */
-export function RuleDraw({
-  className,
-  delay = 0,
-}: {
-  className?: string;
-  delay?: number;
-}) {
-  const reduced = useReducedMotion();
-
-  return (
-    <motion.span
-      aria-hidden="true"
-      className={className}
-      data-motion="rule"
-      initial={{ scaleX: reduced ? 1 : 0 }}
-      whileInView={{ scaleX: 1 }}
-      viewport={{ once: true, amount: 0.9 }}
-      transition={{ duration: reduced ? 0 : 0.9, ease: EASE_OUT, delay }}
-      style={{ transformOrigin: "left center", display: "block" }}
-    />
-  );
-}

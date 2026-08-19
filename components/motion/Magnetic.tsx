@@ -11,11 +11,11 @@ import { POINTER_SPRING } from "./easing";
  *
  * Gated on a real hover-capable pointer: on touch, `mousemove` fires once on
  * tap and would leave the control permanently offset. Vertical travel is
- * damped to 60% of horizontal, which keeps rows of buttons on their baseline.
+ * damped to 55% of horizontal, which keeps rows of buttons on their baseline.
  */
 export default function Magnetic({
   children,
-  strength = 16,
+  strength = 7,
   className,
 }: {
   children: ReactNode;
@@ -47,7 +47,7 @@ export default function Magnetic({
     const dx = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
     const dy = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
     mx.set(dx * strength);
-    my.set(dy * strength * 0.6);
+    my.set(dy * strength * 0.55);
   };
 
   const onLeave = () => {
