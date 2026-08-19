@@ -1449,15 +1449,18 @@ body {
 /* ══════════════════════════════════════════════════════════════════════════
    Hero ambient backdrop — the one loop that never stops.
 
-   A soft warm field with discs drifting and turning through it. This is a
-   deliberate, requested departure from Modernist's "no radius, no gradient,
-   no decoration" rules, and it is fenced to this backdrop only — nothing else
-   on the page inherits a curve or a gradient from it.
+   Modelled on jeton.com. Their hero is a looping MP4 of a pre-rendered 3D coin
+   animation over a solid orange field; that asset cannot be reproduced in CSS,
+   so this rebuilds the technique instead — discs tumbling in real 3D space,
+   each a circle flattened into an ellipse by `rotateX` the way a physical coin
+   is, drifting through a warm gradient field.
 
-   Weighted to the right and masked out toward the left so the ink-on-light
-   headline keeps full contrast. Softness comes from gradient falloff, not from
-   `filter: blur()`, which would cost a full-viewport offscreen buffer every
-   frame for the life of the page.
+   Two nested layers per coin with independent, non-dividing periods: the outer
+   drifts, the inner tumbles. That is what stops a short loop from reading as a
+   loop.
+
+   Softness comes from gradient falloff, never `filter: blur()`, which would
+   cost a full-viewport offscreen buffer every frame for the life of the page.
    ══════════════════════════════════════════════════════════════════════ */
 
 .hero {
@@ -1504,7 +1507,7 @@ body {
       color-mix(in srgb, var(--color-accent-300) 46%, transparent) 0%,
       transparent 74%
     );
-  animation: fieldDrift 38s ease-in-out infinite;
+  animation: fieldDrift 24s ease-in-out infinite;
   will-change: transform;
 }
 
@@ -1514,14 +1517,14 @@ body {
     transform: translate3d(0, 0, 0) scale(1);
   }
   33% {
-    transform: translate3d(-3%, 2.5%, 0) scale(1.07);
+    transform: translate3d(-6%, 5%, 0) scale(1.14);
   }
   66% {
-    transform: translate3d(2.5%, -2%, 0) scale(1.03);
+    transform: translate3d(5%, -4%, 0) scale(1.07);
   }
 }
 
-/* — a slow breathing highlight, so the field is never quite static — */
+/* — a breathing highlight, so the field is never quite still — */
 .hero-glow {
   position: absolute;
   top: -20%;
@@ -1533,7 +1536,7 @@ body {
     color-mix(in srgb, var(--color-accent-200) 62%, transparent) 0%,
     transparent 68%
   );
-  animation: glowBreathe 26s ease-in-out infinite;
+  animation: glowBreathe 17s ease-in-out infinite;
   will-change: transform, opacity;
 }
 
@@ -1541,124 +1544,241 @@ body {
   0%,
   100% {
     transform: translate3d(0, 0, 0) scale(1);
-    opacity: 0.55;
+    opacity: 0.5;
   }
   50% {
-    transform: translate3d(-4%, 3%, 0) scale(1.12);
-    opacity: 0.9;
+    transform: translate3d(-8%, 6%, 0) scale(1.24);
+    opacity: 0.95;
   }
 }
 
-/* — the discs — */
-.hero-disc {
+/* — the 3D stage the coins tumble in — */
+.hero-stage {
+  position: absolute;
+  inset: 0;
+  perspective: 1100px;
+  transform-style: preserve-3d;
+}
+
+/* Outer layer: drift and depth. */
+.hero-coin {
   position: absolute;
   display: block;
-  border-radius: 50%;
+  transform-style: preserve-3d;
   will-change: transform;
 }
 
-.hero-disc-1 {
-  width: clamp(200px, 27vw, 460px);
-  aspect-ratio: 1 / 0.4;
-  top: 14%;
-  right: 6%;
+/* Inner layer: the tumble. A full 360deg of `rotateZ` per cycle loops with no
+   seam, while `rotateX` oscillates so the coin opens toward the viewer and
+   flattens back to an edge-on ellipse. */
+.hero-coin-face {
+  position: absolute;
+  inset: 0;
+  display: block;
+  border-radius: 50%;
+  transform-style: preserve-3d;
+  will-change: transform;
   background: linear-gradient(
     148deg,
-    color-mix(in srgb, var(--color-accent-200) 92%, transparent) 0%,
-    color-mix(in srgb, var(--color-accent-500) 70%, transparent) 58%,
-    color-mix(in srgb, var(--color-accent-700) 46%, transparent) 100%
+    color-mix(in srgb, var(--color-accent-200) 94%, transparent) 0%,
+    color-mix(in srgb, var(--color-accent-400) 78%, transparent) 46%,
+    color-mix(in srgb, var(--color-accent-600) 56%, transparent) 100%
   );
-  box-shadow: 0 40px 70px color-mix(in srgb, var(--color-accent-800) 16%, transparent);
-  animation: disc1 30s ease-in-out infinite;
+  box-shadow: 0 34px 60px color-mix(in srgb, var(--color-accent-800) 16%, transparent);
 }
 
-.hero-disc-2 {
-  width: clamp(150px, 20vw, 340px);
-  aspect-ratio: 1 / 0.36;
-  top: 34%;
-  right: 20%;
+/* The underside, pushed back in Z so the tilt reveals real thickness. */
+.hero-coin-face::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
   background: linear-gradient(
-    160deg,
-    color-mix(in srgb, var(--color-accent-100) 88%, transparent) 0%,
-    color-mix(in srgb, var(--color-accent-400) 66%, transparent) 62%,
-    color-mix(in srgb, var(--color-accent-600) 40%, transparent) 100%
+    148deg,
+    color-mix(in srgb, var(--color-accent-500) 72%, transparent) 0%,
+    color-mix(in srgb, var(--color-accent-700) 58%, transparent) 100%
   );
-  box-shadow: 0 30px 56px color-mix(in srgb, var(--color-accent-800) 14%, transparent);
-  animation: disc2 38s ease-in-out infinite;
+  transform: translateZ(-14px);
 }
 
-.hero-disc-3 {
-  width: clamp(120px, 16vw, 280px);
-  aspect-ratio: 1 / 0.44;
-  bottom: 16%;
-  right: 12%;
-  background: linear-gradient(
-    136deg,
-    color-mix(in srgb, var(--color-accent-300) 84%, transparent) 0%,
-    color-mix(in srgb, var(--color-accent-600) 58%, transparent) 100%
-  );
-  box-shadow: 0 26px 48px color-mix(in srgb, var(--color-accent-800) 14%, transparent);
-  animation: disc3 34s ease-in-out infinite;
+.hero-coin-1 {
+  width: clamp(190px, 25vw, 400px);
+  aspect-ratio: 1;
+  top: 6%;
+  right: 8%;
+  animation: coinDrift1 21s ease-in-out infinite;
 }
 
-.hero-disc-4 {
-  width: clamp(90px, 11vw, 190px);
-  aspect-ratio: 1 / 0.5;
-  top: 60%;
-  right: 34%;
-  background: linear-gradient(
-    150deg,
-    color-mix(in srgb, var(--color-accent-100) 80%, transparent) 0%,
-    color-mix(in srgb, var(--color-accent-400) 52%, transparent) 100%
-  );
-  animation: disc4 44s ease-in-out infinite;
+.hero-coin-1 .hero-coin-face {
+  animation: coinTumble1 17s linear infinite;
 }
 
-/* Each disc keeps its own tilt inside its keyframes — a base `transform` on
-   the element would be overwritten the moment the animation started. */
-@keyframes disc1 {
+.hero-coin-2 {
+  width: clamp(140px, 19vw, 310px);
+  aspect-ratio: 1;
+  top: 33%;
+  right: 26%;
+  animation: coinDrift2 27s ease-in-out infinite;
+}
+
+.hero-coin-2 .hero-coin-face {
+  animation: coinTumble2 23s linear infinite;
+}
+
+.hero-coin-3 {
+  width: clamp(110px, 15vw, 250px);
+  aspect-ratio: 1;
+  bottom: 8%;
+  right: 14%;
+  animation: coinDrift3 24s ease-in-out infinite;
+}
+
+.hero-coin-3 .hero-coin-face {
+  animation: coinTumble3 19s linear infinite;
+}
+
+.hero-coin-4 {
+  width: clamp(80px, 11vw, 180px);
+  aspect-ratio: 1;
+  top: 58%;
+  right: 38%;
+  animation: coinDrift4 30s ease-in-out infinite;
+}
+
+.hero-coin-4 .hero-coin-face {
+  animation: coinTumble4 26s linear infinite;
+}
+
+.hero-coin-5 {
+  width: clamp(60px, 8vw, 130px);
+  aspect-ratio: 1;
+  top: 16%;
+  right: 40%;
+  animation: coinDrift5 18s ease-in-out infinite;
+}
+
+.hero-coin-5 .hero-coin-face {
+  animation: coinTumble5 14s linear infinite;
+}
+
+/* Drift — large enough to actually be seen. The previous pass moved these
+   ~26px over 30s, roughly 1px per second, which reads as a static image. */
+@keyframes coinDrift1 {
   0%,
   100% {
-    transform: translate3d(0, 0, 0) rotate(-16deg);
+    transform: translate3d(0, 0, 0) scale(1);
   }
   50% {
-    transform: translate3d(-26px, 34px, 0) rotate(-9deg);
+    transform: translate3d(-120px, 150px, 0) scale(1.12);
   }
 }
 
-@keyframes disc2 {
+@keyframes coinDrift2 {
   0%,
   100% {
-    transform: translate3d(0, 0, 0) rotate(-24deg);
+    transform: translate3d(0, 0, 0) scale(1);
   }
   50% {
-    transform: translate3d(34px, -30px, 0) rotate(-31deg);
+    transform: translate3d(160px, -130px, 0) scale(0.86);
   }
 }
 
-@keyframes disc3 {
+@keyframes coinDrift3 {
   0%,
   100% {
-    transform: translate3d(0, 0, 0) rotate(12deg);
+    transform: translate3d(0, 0, 0) scale(1);
   }
   50% {
-    transform: translate3d(-30px, -24px, 0) rotate(19deg);
+    transform: translate3d(-140px, -110px, 0) scale(1.18);
   }
 }
 
-@keyframes disc4 {
+@keyframes coinDrift4 {
   0%,
   100% {
-    transform: translate3d(0, 0, 0) rotate(-6deg);
+    transform: translate3d(0, 0, 0) scale(1);
   }
   50% {
-    transform: translate3d(22px, 28px, 0) rotate(2deg);
+    transform: translate3d(120px, 140px, 0) scale(0.9);
+  }
+}
+
+@keyframes coinDrift5 {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-100px, 120px, 0) scale(1.22);
+  }
+}
+
+/* Tumble — a full turn per cycle so the loop closes on itself, with the tilt
+   opening and shutting on the way round. */
+@keyframes coinTumble1 {
+  0% {
+    transform: rotateX(66deg) rotateZ(0deg);
+  }
+  50% {
+    transform: rotateX(34deg) rotateZ(180deg);
+  }
+  100% {
+    transform: rotateX(66deg) rotateZ(360deg);
+  }
+}
+
+@keyframes coinTumble2 {
+  0% {
+    transform: rotateX(58deg) rotateZ(360deg);
+  }
+  50% {
+    transform: rotateX(24deg) rotateZ(180deg);
+  }
+  100% {
+    transform: rotateX(58deg) rotateZ(0deg);
+  }
+}
+
+@keyframes coinTumble3 {
+  0% {
+    transform: rotateX(72deg) rotateZ(0deg);
+  }
+  50% {
+    transform: rotateX(40deg) rotateZ(180deg);
+  }
+  100% {
+    transform: rotateX(72deg) rotateZ(360deg);
+  }
+}
+
+@keyframes coinTumble4 {
+  0% {
+    transform: rotateX(50deg) rotateZ(0deg);
+  }
+  50% {
+    transform: rotateX(18deg) rotateZ(180deg);
+  }
+  100% {
+    transform: rotateX(50deg) rotateZ(360deg);
+  }
+}
+
+@keyframes coinTumble5 {
+  0% {
+    transform: rotateX(64deg) rotateZ(360deg);
+  }
+  50% {
+    transform: rotateX(30deg) rotateZ(180deg);
+  }
+  100% {
+    transform: rotateX(64deg) rotateZ(0deg);
   }
 }
 
 /* Parked by the IntersectionObserver in HeroBackdrop.tsx once the hero leaves
    the viewport, and whenever the tab is in the background. */
-.hero-backdrop.is-paused * {
+.hero-backdrop.is-paused *,
+.hero-backdrop.is-paused *::after {
   animation-play-state: paused;
 }
 
@@ -1756,7 +1876,8 @@ body {
 @media (max-width: 700px) {
   /* On a phone the hero is nearly all headline — the composition sits behind
      the type instead of beside it, so it has to pull right back. */
-  .hero-disc-4 {
+  .hero-coin-4,
+  .hero-coin-5 {
     display: none;
   }
 

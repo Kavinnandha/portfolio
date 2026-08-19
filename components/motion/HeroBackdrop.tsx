@@ -3,23 +3,30 @@
 import { useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
+const COINS = [1, 2, 3, 4, 5];
+
 /**
- * The constant ambient loop behind the hero — the one piece of motion on the
- * page that never stops and never waits for scroll.
+ * The constant ambient loop behind the hero.
  *
- * Modelled on the reference: a soft warm gradient field with discs drifting
- * and turning through it, rather than the design system's usual hard edges.
- * This is a deliberate, requested departure from Modernist's "no radius, no
- * decoration" rule, and it is fenced to the hero backdrop alone — nothing else
- * on the page picks up a curve or a gradient from it.
+ * Modelled on jeton.com, whose hero is a full-bleed looping MP4 of a
+ * pre-rendered 3D coin animation over a solid orange field. That exact asset
+ * cannot be reproduced in CSS — and it is theirs — so this rebuilds the
+ * *technique*: discs tumbling in real 3D space, each one a circle flattened
+ * into an ellipse by `rotateX` exactly as a physical coin is, drifting through
+ * a warm gradient field.
  *
- * The whole composition is weighted to the right and masked out toward the
- * left, so the ink-on-light headline keeps its contrast.
+ * Each coin is two nested layers with independent loops: the outer drifts and
+ * scales, the inner tumbles. Because the two periods differ and do not divide
+ * evenly, the pair never visibly repeats — the trick that keeps a short CSS
+ * loop from reading as a loop.
  *
- * Every layer is a CSS keyframe on `transform` (plus one `opacity`), so the
- * loop runs on the compositor with no per-frame JavaScript. The only JS is one
- * IntersectionObserver that parks it when the hero scrolls away — an animation
- * that runs forever must not keep a core busy for a reader three sections down.
+ * All of it is `transform`/`opacity` keyframes, so the whole composition lives
+ * on the compositor with no per-frame JavaScript. The only JS is one
+ * IntersectionObserver that parks it when the hero scrolls away.
+ *
+ * If a real 3D render is produced later, drop it in as a `<video autoplay loop
+ * muted playsInline>` inside `.hero-backdrop` and delete the coins — that is
+ * precisely how the reference does it.
  */
 export default function HeroBackdrop() {
   const ref = useRef<HTMLDivElement>(null);
@@ -55,10 +62,13 @@ export default function HeroBackdrop() {
     >
       <div className="hero-field" />
       <div className="hero-glow" />
-      <span className="hero-disc hero-disc-1" />
-      <span className="hero-disc hero-disc-2" />
-      <span className="hero-disc hero-disc-3" />
-      <span className="hero-disc hero-disc-4" />
+      <div className="hero-stage">
+        {COINS.map((n) => (
+          <span className={`hero-coin hero-coin-${n}`} key={n}>
+            <i className="hero-coin-face" />
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
