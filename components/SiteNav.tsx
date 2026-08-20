@@ -1,247 +1,210 @@
 "use client";
 
-import { useLenis } from "lenis/react";
-import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from "motion/react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import Magnetic from "./motion/Magnetic";
-import { EASE_IN_OUT } from "./motion/easing";
+import { useEffect, useRef, useState } from "react";
+import { gsap, initGsap, prefersReduced, ScrollTrigger } from "@/lib/gsap";
+import { getLenis } from "./motion/SmoothScroll";
 
-const WORK_PANEL = [
-  { title: "Moodle on k3s", sub: "1,000+ concurrent users, bare metal", tone: "" },
-  { title: "Zero Trust edge", sub: "Tunnel, Tailscale, OpenWRT", tone: " is-ink" },
-  { title: "HR Connect", sub: "Microservices, RBAC, Redis", tone: " is-soft" },
+const LINKS = [
+  { href: "#work", label: "Work", index: "01" },
+  { href: "#pipeline", label: "Pipeline", index: "02" },
+  { href: "#toolkit", label: "Toolkit", index: "03" },
+  { href: "#record", label: "Record", index: "04" },
+  { href: "#contact", label: "Contact", index: "05" },
 ];
 
-const TOOLKIT_PANEL = [
-  "Containers & orchestration",
-  "CI/CD & automation",
-  "Cloud & edge",
-  "Observability",
-  "Networking",
-  "Security & access",
+const DIRECT = [
+  { href: "mailto:kavinnandhakavin@gmail.com", label: "kavinnandhakavin@gmail.com" },
+  { href: "tel:+919345569707", label: "+91 93455 69707" },
+  { href: "https://github.com/kavinnandha", label: "github.com/kavinnandha" },
+  { href: "https://linkedin.com/in/kavinnandha", label: "linkedin.com/in/kavinnandha" },
 ];
 
-const DRAWER_LINKS = [
-  { href: "#work", label: "Work" },
-  { href: "#toolkit", label: "Capabilities" },
-  { href: "#pipeline", label: "Pipeline" },
-  { href: "#record", label: "Record" },
-  { href: "#contact", label: "Let's talk" },
-];
-
-type MenuKey = "work" | "toolkit" | null;
-
+/**
+ * The bar and the overlay menu.
+ *
+ * Two scroll behaviours, both off one ScrollTrigger: the bar condenses into a
+ * floating pill once the hero is behind you, and it retracts while you scroll
+ * down and returns the moment you scroll up. Retracting on direction rather
+ * than on position is what keeps a fixed bar from eating the top of a pinned
+ * section for the whole time you are reading it.
+ *
+ * The menu is animated imperatively rather than by class, because the links
+ * have to cascade in and cascade back out — a CSS transition can do the first
+ * half of that and not the second.
+ */
 export default function SiteNav() {
-  const reduced = useReducedMotion();
-  const lenis = useLenis();
-  const { scrollY } = useScroll();
+  const wrap = useRef<HTMLDivElement>(null);
+  const overlay = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
 
-  const [condensed, setCondensed] = useState(false);
-  const [menu, setMenu] = useState<MenuKey>(null);
-  const [drawer, setDrawer] = useState(false);
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // The brand mark is a wheel: it turns with the page, which is the cheapest
-  // possible read on "you are moving" and costs one compositor property.
-  const markRotate = useTransform(scrollY, (y) => (reduced ? 0 : y * 0.28));
-
-  // Deferred to the next frame rather than run inline: a reload that restores
-  // a mid-page scroll position fires no scroll event, so the initial state has
-  // to be read once — just not synchronously inside the effect.
+  /* ── scroll behaviour ─────────────────────────────────────────────── */
   useEffect(() => {
-    const unsub = scrollY.on("change", (y) => setCondensed(y > 90));
-    const id = requestAnimationFrame(() => setCondensed(scrollY.get() > 90));
+    initGsap();
+    const el = wrap.current;
+    if (!el) return;
+
+    const ctx = gsap.context(() => {
+      const mark = el.querySelector<HTMLElement>(".nav-mark");
+      const show = gsap.quickTo(el, "yPercent", { duration: 0.5, ease: "hop" });
+
+      const trigger = ScrollTrigger.create({
+        start: 0,
+        end: "max",
+        onUpdate: (self) => {
+          const y = self.scroll();
+          el.classList.toggle("is-solid", y > 80);
+          // Never retract while the menu is up, and never at the very top.
+          const hide = self.direction === 1 && y > 320 && !el.classList.contains("is-locked");
+          show(hide ? -140 : 0);
+          if (mark) gsap.set(mark, { rotate: y * 0.22 });
+        },
+      });
+
+      return () => trigger.kill();
+    }, el);
+
+    return () => ctx.revert();
+  }, []);
+
+  /* ── the overlay ──────────────────────────────────────────────────── */
+  useEffect(() => {
+    const el = overlay.current;
+    const bar = wrap.current;
+    if (!el) return;
+
+    bar?.classList.toggle("is-locked", open);
+    const lenis = getLenis();
+    if (open) lenis?.stop();
+    else lenis?.start();
+    document.body.classList.toggle("menu-open", open);
+
+    if (prefersReduced()) {
+      gsap.set(el, { autoAlpha: open ? 1 : 0 });
+      gsap.set(".menu-line, .menu-direct li", { opacity: 1, yPercent: 0 });
+      return;
+    }
+
+    const tl = gsap.timeline();
+    if (open) {
+      tl.set(el, { autoAlpha: 1, clipPath: "inset(0% 0% 100% 0%)" })
+        .to(el, { clipPath: "inset(0% 0% 0% 0%)", duration: 0.8, ease: "swing" })
+        .fromTo(
+          ".menu-line",
+          { yPercent: 115 },
+          { yPercent: 0, duration: 0.85, stagger: 0.06, ease: "hop" },
+          0.28,
+        )
+        .fromTo(
+          ".menu-direct li",
+          { opacity: 0, y: 14 },
+          { opacity: 1, y: 0, duration: 0.6, stagger: 0.05 },
+          0.5,
+        );
+    } else {
+      tl.to(".menu-line", { yPercent: -115, duration: 0.4, stagger: 0.03, ease: "hop" })
+        .to(el, { clipPath: "inset(0% 0% 100% 0%)", duration: 0.6, ease: "swing" }, 0.1)
+        .set(el, { autoAlpha: 0 });
+    }
+
     return () => {
-      unsub();
-      cancelAnimationFrame(id);
+      tl.kill();
     };
-  }, [scrollY]);
-
-  // A short close delay, so crossing the gap between a trigger and its panel
-  // does not snap the panel shut under the pointer.
-  const open = useCallback((key: Exclude<MenuKey, null>) => {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-    setMenu(key);
-  }, []);
-
-  const scheduleClose = useCallback(() => {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-    closeTimer.current = setTimeout(() => setMenu(null), 140);
-  }, []);
-
-  const openWork = useCallback(() => open("work"), [open]);
-  const openToolkit = useCallback(() => open("toolkit"), [open]);
-  const closeMenu = useCallback(() => setMenu(null), []);
-
-  useEffect(() => () => {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-  }, []);
+  }, [open]);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      setMenu(null);
-      setDrawer(false);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
     };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, []);
-
-  // The drawer owns the scroll while it is up.
-  useEffect(() => {
-    if (drawer) lenis?.stop();
-    else lenis?.start();
-    document.body.classList.toggle("nav-locked", drawer);
     return () => {
-      lenis?.start();
-      document.body.classList.remove("nav-locked");
+      document.removeEventListener("keydown", onKey);
+      document.body.classList.remove("menu-open");
     };
-  }, [drawer, lenis]);
+  }, []);
 
   return (
     <>
-      <div className={`nav-wrap${condensed ? " is-condensed" : ""}`}>
-        <nav className={`nav${condensed ? " is-condensed" : ""}`} aria-label="Primary">
-          <a className="nav-brand" href="#top" onClick={() => setDrawer(false)}>
-            <motion.span className="nav-mark" style={{ rotate: markRotate }} aria-hidden="true" />
-            Kavin Nandha
+      <div className="nav-wrap" ref={wrap}>
+        <nav className="nav" aria-label="Primary">
+          <a className="nav-brand" href="#top" data-cursor onClick={() => setOpen(false)}>
+            <span className="nav-mark" aria-hidden="true" />
+            <span className="nav-brand-text">
+              Kavin Nandha
+              <span className="nav-brand-sub">Cloud / DevOps</span>
+            </span>
           </a>
 
-          <div className="nav-links">
-            <div
-              className={`nav-item${menu === "work" ? " is-open" : ""}`}
-              onMouseEnter={openWork}
-              onMouseLeave={scheduleClose}
-            >
-              <a
-                className="nav-link"
-                href="#work"
-                aria-expanded={menu === "work"}
-                onFocus={openWork}
-                onClick={closeMenu}
-              >
-                Work
-                <span className="nav-caret" aria-hidden="true">
-                  ▾
-                </span>
-              </a>
-            </div>
-
-            <div
-              className={`nav-item${menu === "toolkit" ? " is-open" : ""}`}
-              onMouseEnter={openToolkit}
-              onMouseLeave={scheduleClose}
-            >
-              <a
-                className="nav-link"
-                href="#toolkit"
-                aria-expanded={menu === "toolkit"}
-                onFocus={openToolkit}
-                onClick={closeMenu}
-              >
-                Capabilities
-                <span className="nav-caret" aria-hidden="true">
-                  ▾
-                </span>
-              </a>
-            </div>
-
-            <a className="nav-link" href="#pipeline">
-              Pipeline
-            </a>
-            <a className="nav-link" href="#record">
-              Record
-            </a>
-          </div>
+          <ul className="nav-links">
+            {LINKS.slice(0, 4).map((link) => (
+              <li key={link.href}>
+                <a className="nav-link" href={link.href}>
+                  <span className="nav-link-index">{link.index}</span>
+                  <span className="nav-link-text" data-text={link.label}>
+                    {link.label}
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
 
           <div className="nav-actions">
+            <span className="nav-status">
+              <span className="nav-status-dot" aria-hidden="true" />
+              Available
+            </span>
             <a
-              className="nav-ghost"
-              href="https://github.com/kavinnandha"
-              target="_blank"
-              rel="noopener"
+              className="nav-cta"
+              href="#contact"
+              data-magnetic="0.25"
+              data-cursor
+              onClick={() => setOpen(false)}
             >
-              GitHub
+              Let&rsquo;s talk
             </a>
-            <Magnetic strength={7}>
-              <a className="nav-cta" href="#contact" onClick={() => setDrawer(false)}>
-                Let&rsquo;s talk
-                <span className="nav-cta-dot" aria-hidden="true" />
-              </a>
-            </Magnetic>
             <button
               type="button"
-              className={`nav-toggle${drawer ? " is-open" : ""}`}
-              aria-label={drawer ? "Close menu" : "Open menu"}
-              aria-expanded={drawer}
-              aria-controls="nav-drawer"
-              onClick={() => setDrawer((v) => !v)}
+              className={`nav-burger${open ? " is-open" : ""}`}
+              aria-label={open ? "Close menu" : "Open menu"}
+              aria-expanded={open}
+              aria-controls="site-menu"
+              onClick={() => setOpen((value) => !value)}
             >
               <span aria-hidden="true" />
               <span aria-hidden="true" />
             </button>
           </div>
-
-          <div
-            className={`nav-panel nav-panel-work${menu === "work" ? " is-open" : ""}`}
-            onMouseEnter={openWork}
-            onMouseLeave={scheduleClose}
-          >
-            {WORK_PANEL.map((p) => (
-              <a className="panel-card" href="#work" key={p.title} onClick={closeMenu}>
-                <span className={`panel-dot${p.tone}`} aria-hidden="true" />
-                <span className="panel-title">{p.title}</span>
-                <span className="panel-sub">{p.sub}</span>
-              </a>
-            ))}
-          </div>
-
-          <div
-            className={`nav-panel nav-panel-toolkit${menu === "toolkit" ? " is-open" : ""}`}
-            onMouseEnter={openToolkit}
-            onMouseLeave={scheduleClose}
-          >
-            {TOOLKIT_PANEL.map((label) => (
-              <a className="panel-row" href="#toolkit" key={label} onClick={closeMenu}>
-                <span className="panel-bullet" aria-hidden="true" />
-                {label}
-              </a>
-            ))}
-          </div>
         </nav>
       </div>
 
-      {/* The canvas hides the link row below 960px and puts nothing in its
-          place. This is that replacement, assembled from the same parts. */}
-      <AnimatePresence>
-        {drawer && (
-          <motion.div
-            id="nav-drawer"
-            className="nav-drawer"
-            initial={{ clipPath: "inset(0 0 100% 0)" }}
-            animate={{ clipPath: "inset(0 0 0% 0)" }}
-            exit={{ clipPath: "inset(0 0 100% 0)" }}
-            transition={{ duration: reduced ? 0 : 0.5, ease: EASE_IN_OUT }}
-          >
-            <ul className="nav-drawer-list">
-              {DRAWER_LINKS.map((l) => (
-                <li key={l.href}>
-                  <a href={l.href} onClick={() => setDrawer(false)}>
-                    {l.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-            <div className="nav-drawer-foot">
-              <a href="mailto:kavinnandhakavin@gmail.com">kavinnandhakavin@gmail.com</a>
-              <a href="tel:+919345569707">+91 93455 69707</a>
-              <a href="https://github.com/kavinnandha" target="_blank" rel="noopener">
-                github.com/kavinnandha
+      <div className="menu" id="site-menu" ref={overlay} aria-hidden={!open} inert={!open}>
+        <ul className="menu-list">
+          {LINKS.map((link) => (
+            <li key={link.href}>
+              <a href={link.href} onClick={() => setOpen(false)} data-cursor>
+                <span className="menu-mask">
+                  <span className="menu-line">
+                    <span className="menu-index">{link.index}</span>
+                    {link.label}
+                  </span>
+                </span>
               </a>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </li>
+          ))}
+        </ul>
+
+        <ul className="menu-direct">
+          {DIRECT.map((item) => (
+            <li key={item.href}>
+              <a
+                href={item.href}
+                {...(item.href.startsWith("http") ? { target: "_blank", rel: "noopener" } : {})}
+              >
+                {item.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
     </>
   );
 }
