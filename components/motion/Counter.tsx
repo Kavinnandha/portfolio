@@ -1,8 +1,7 @@
 "use client";
 
-import { animate, motion, useInView, useMotionValue, useReducedMotion, useTransform } from "motion/react";
-import { useEffect, useRef } from "react";
-import { EASE_OUT } from "./easing";
+import { useRef } from "react";
+import { EASE, claim, gsap, prefersReducedMotion, useGSAP } from "./gsap";
 
 type CounterProps = {
   to: number;
@@ -20,41 +19,57 @@ type CounterProps = {
  * assistive tech and crawlers read "1,000+" rather than whatever frame the
  * animation happens to be on — and the `<noscript>` rule in the layout swaps
  * the two if JavaScript never arrives.
+ *
+ * The count is a tween over a plain object whose value is written to
+ * `textContent` on update. Rendering each frame through React would be a
+ * re-render per frame for a string that changes and is then thrown away.
  */
 export default function Counter({
   to,
   prefix = "",
   suffix = "",
-  duration = 1.8,
+  duration = 2,
   group = true,
 }: CounterProps) {
   const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true, amount: 0.5 });
-  const reduced = useReducedMotion();
+  const outRef = useRef<HTMLSpanElement>(null);
 
-  const count = useMotionValue(0);
-  const text = useTransform(count, (v) => {
-    const n = Math.round(v);
-    return `${prefix}${group ? n.toLocaleString("en-US") : n}${suffix}`;
-  });
+  const format = (n: number) => `${prefix}${group ? n.toLocaleString("en-US") : n}${suffix}`;
+  const truth = format(to);
 
-  useEffect(() => {
-    if (!inView) return;
-    if (reduced) {
-      count.set(to);
-      return;
-    }
-    const controls = animate(count, to, { duration, ease: EASE_OUT });
-    return () => controls.stop();
-  }, [inView, reduced, to, duration, count]);
+  useGSAP(
+    () => {
+      const el = ref.current;
+      const out = outRef.current;
+      if (!el || !out) return;
+      claim(el);
 
-  const truth = `${prefix}${group ? to.toLocaleString("en-US") : to}${suffix}`;
+      if (prefersReducedMotion()) {
+        out.textContent = truth;
+        return;
+      }
+
+      const value = { n: 0 };
+      gsap.to(value, {
+        n: to,
+        duration,
+        ease: EASE,
+        // Integers only: a statistic flickering through 847.3 reads as broken.
+        snap: { n: 1 },
+        onUpdate: () => {
+          out.textContent = format(value.n);
+        },
+        scrollTrigger: { trigger: el, start: "top 88%", once: true },
+      });
+    },
+    { scope: ref },
+  );
 
   return (
-    <span ref={ref}>
-      <motion.span className="count-anim" aria-hidden="true">
-        {text}
-      </motion.span>
+    <span ref={ref} data-motion="count">
+      <span className="count-anim" ref={outRef} aria-hidden="true">
+        {prefix}0{suffix}
+      </span>
       <span className="count-true visually-hidden">{truth}</span>
     </span>
   );

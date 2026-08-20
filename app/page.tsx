@@ -4,7 +4,9 @@ import ContactForm from "@/components/ContactForm";
 import SiteNav from "@/components/SiteNav";
 import { CardStack, CardStackItem } from "@/components/motion/CardStack";
 import Counter from "@/components/motion/Counter";
+import Divider from "@/components/motion/Divider";
 import HeroBackdrop from "@/components/motion/HeroBackdrop";
+import HeroStage from "@/components/motion/HeroStage";
 import Magnetic from "@/components/motion/Magnetic";
 import Marquee from "@/components/motion/Marquee";
 import Parallax from "@/components/motion/Parallax";
@@ -114,7 +116,7 @@ export default function Home() {
       <SiteNav />
 
       <main>
-        <section id="top" className="hero">
+        <HeroStage>
           <HeroBackdrop />
 
           <div className="hero-inner">
@@ -125,8 +127,11 @@ export default function Home() {
             </div>
 
             <h1 className="hero-title">
+              {/* Driven by the hero's master timeline rather than its own, so
+                  the headline is part of one composition instead of an
+                  animation that happens to start at the same moment. */}
               <TextMask
-                delay={0.75}
+                trigger="external"
                 lines={["Production", "infrastructure,", "owned end to end."]}
                 lineClassNames={[undefined, undefined, "accent"]}
               />
@@ -170,9 +175,9 @@ export default function Home() {
             </div>
             <span className="hero-load">k3s · 1,000+ concurrent</span>
           </div>
-        </section>
+        </HeroStage>
 
-        <hr className="hr" />
+        <Divider />
 
         <RevealGroup as="section" className="stats" stagger={0.09}>
           <div className="stats-grid">
@@ -187,19 +192,23 @@ export default function Home() {
           </div>
         </RevealGroup>
 
-        <hr className="hr" />
+        <Divider />
 
         <Marquee items={ticker} />
 
-        <hr className="hr" />
+        <Divider />
 
         <Reveal as="section" className="section split split-about">
           <div className="split-figure">
             <span className="kicker" style={{ marginBottom: 14 }}>
               About
             </span>
-            <figure className="grayscale">
-              <Parallax className="figure-4x5" amount={7}>
+            {/* The black-and-white treatment lives on the Parallax frame here,
+                not on the figure: it is scrubbed as the portrait settles into
+                the middle of the viewport, so the image gains presence exactly
+                where it is being looked at. */}
+            <figure>
+              <Parallax className="figure-4x5" amount={7} desaturate>
                 <Image
                   src={portrait}
                   alt="Kavin Nandha M K"
@@ -233,7 +242,7 @@ export default function Home() {
           </div>
         </Reveal>
 
-        <hr className="hr" />
+        <Divider />
 
         <section id="work" className="section">
           <Reveal className="section-head">
@@ -343,7 +352,7 @@ export default function Home() {
           </CardStack>
         </section>
 
-        <hr className="hr" />
+        <Divider />
 
         <section id="case" className="section">
           <Reveal className="section-head" style={{ marginBottom: 0 }}>
@@ -407,7 +416,7 @@ export default function Home() {
           </div>
         </section>
 
-        <hr className="hr" />
+        <Divider />
 
         <section id="toolkit" className="section">
           <Reveal className="section-head">
@@ -426,7 +435,7 @@ export default function Home() {
           </RevealGroup>
         </section>
 
-        <hr className="hr" />
+        <Divider />
 
         <section id="record" className="section">
           <Reveal>

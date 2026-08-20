@@ -1,22 +1,10 @@
 "use client";
 
-import { motion, useReducedMotion, type Variants } from "motion/react";
 import type { CSSProperties, ReactNode } from "react";
-import { EASE_OUT } from "./easing";
+import { useRef } from "react";
+import { EASE, claim, gsap, prefersReducedMotion, settle, useGSAP } from "./gsap";
 
-const TAGS = {
-  div: motion.div,
-  section: motion.section,
-  article: motion.article,
-  figure: motion.figure,
-  li: motion.li,
-  // Table parts, so the spec table can stagger row by row without giving up
-  // its semantics for a grid of divs.
-  tbody: motion.tbody,
-  tr: motion.tr,
-};
-
-type Tag = keyof typeof TAGS;
+type Tag = "div" | "section" | "article" | "figure" | "li" | "tbody" | "tr";
 
 type RevealProps = {
   children: ReactNode;
@@ -26,28 +14,30 @@ type RevealProps = {
   as?: Tag;
   /** Seconds before the entrance starts once the element qualifies. */
   delay?: number;
-  /** Travel distance in px. Negative values enter from below. */
+  /** Travel distance in px. */
   y?: number;
   /**
-   * How much of the element must be visible to trigger.
-   *
-   * Defaults to `"some"` (threshold 0) rather than a fraction, and that is
-   * deliberate: `intersectionRatio` is visible-area over *element* area, so it
-   * caps at viewportHeight / elementHeight. Any element taller than the
-   * viewport divided by the threshold can never reach it — the stacked work
-   * grid on a landscape phone would sit at `opacity: 0` forever. The negative
-   * bottom margin below is what actually holds the entrance back until the
-   * element is meaningfully on screen.
+   * Where the element's top must reach before the entrance fires, as a
+   * ScrollTrigger start string. The default holds until the element is
+   * meaningfully on screen rather than the instant its first pixel is.
    */
-  amount?: number | "some" | "all";
+  start?: string;
 };
 
+/** The line every entrance on the site crosses. */
+const START = "top 86%";
+
 /**
- * The workhorse entrance: a section fades and lifts once it crosses into view.
+ * The workhorse entrance: a block fades and lifts once it crosses into view.
  *
- * `once` is always on — re-animating on every pass reads as a gimmick by the
- * third scroll. Under reduced motion the element still mounts and still uses
- * the same component tree, it just has nothing to travel and no duration.
+ * Fires once. Re-animating on every pass reads as a gimmick by the third
+ * scroll, and it makes the page feel like it is performing rather than
+ * responding.
+ *
+ * The resting state lives in CSS (`[data-motion="reveal"]`), not in an inline
+ * style written at render, so the prerendered HTML is already hidden before a
+ * single line of JavaScript has parsed — there is no frame where the content
+ * is visible and then yanked away.
  */
 export function Reveal({
   children,
@@ -57,35 +47,55 @@ export function Reveal({
   as = "div",
   delay = 0,
   y = 28,
-  amount = "some",
+  start = START,
 }: RevealProps) {
-  const reduced = useReducedMotion();
-  const C = TAGS[as] as typeof motion.div;
+  const ref = useRef<HTMLElement>(null);
+  const Tag = as as "div";
+
+  useGSAP(
+    () => {
+      const el = ref.current;
+      if (!el) return;
+      claim(el);
+
+      if (prefersReducedMotion()) {
+        settle(el);
+        return;
+      }
+
+      gsap.to(el, {
+        opacity: 1,
+        y: 0,
+        duration: 1,
+        delay,
+        ease: EASE,
+        scrollTrigger: { trigger: el, start, once: true },
+      });
+    },
+    { scope: ref },
+  );
 
   return (
-    <C
+    <Tag
       id={id}
       className={className}
-      style={style}
+      style={{ ...style, ["--reveal-y" as string]: `${y}px` } as CSSProperties}
       data-motion="reveal"
-      initial={{ opacity: 0, y: reduced ? 0 : y }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount, margin: "0px 0px -8% 0px" }}
-      transition={{
-        duration: reduced ? 0 : 0.8,
-        ease: EASE_OUT,
-        delay: reduced ? 0 : delay,
-      }}
+      ref={ref as React.Ref<HTMLDivElement>}
     >
       {children}
-    </C>
+    </Tag>
   );
 }
 
 /**
- * Stagger container. Children rendered as `<RevealItem>` inherit the cascade,
- * so a grid resolves cell by cell instead of snapping in as one block — the
- * detail that separates a considered entrance from a CSS transition.
+ * Stagger container. Any `<RevealItem>` beneath it enters as part of one
+ * cascade, so a grid resolves cell by cell instead of snapping in as a block —
+ * the detail that separates a considered entrance from a CSS transition.
+ *
+ * One ScrollTrigger for the whole group, not one per cell: eight cells in the
+ * toolkit grid would otherwise mean eight independent triggers measuring eight
+ * elements that all cross the same line within a few pixels of each other.
  */
 export function RevealGroup({
   children,
@@ -95,37 +105,53 @@ export function RevealGroup({
   as = "div",
   stagger = 0.075,
   delayChildren = 0,
-  amount = "some",
+  start = START,
 }: Omit<RevealProps, "delay" | "y"> & {
   stagger?: number;
   delayChildren?: number;
 }) {
-  const reduced = useReducedMotion();
-  const C = TAGS[as] as typeof motion.div;
+  const ref = useRef<HTMLElement>(null);
+  const Tag = as as "div";
 
-  const variants: Variants = {
-    hidden: {},
-    show: {
-      transition: {
-        staggerChildren: reduced ? 0 : stagger,
-        delayChildren: reduced ? 0 : delayChildren,
-      },
+  useGSAP(
+    () => {
+      const el = ref.current;
+      if (!el) return;
+      const items = gsap.utils.toArray<HTMLElement>(
+        el.querySelectorAll('[data-motion="reveal-item"]'),
+      );
+      claim(el);
+      items.forEach(claim);
+      if (!items.length) return;
+
+      if (prefersReducedMotion()) {
+        settle(items);
+        return;
+      }
+
+      gsap.to(items, {
+        opacity: 1,
+        y: 0,
+        duration: 0.95,
+        delay: delayChildren,
+        ease: EASE,
+        stagger,
+        scrollTrigger: { trigger: el, start, once: true },
+      });
     },
-  };
+    { scope: ref },
+  );
 
   return (
-    <C
+    <Tag
       id={id}
       className={className}
       style={style}
-      data-motion="reveal"
-      variants={variants}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, amount, margin: "0px 0px -8% 0px" }}
+      data-motion="reveal-group"
+      ref={ref as React.Ref<HTMLDivElement>}
     >
       {children}
-    </C>
+    </Tag>
   );
 }
 
@@ -135,30 +161,26 @@ export function RevealItem({
   style,
   as = "div",
   y = 26,
-}: Omit<RevealProps, "delay" | "amount" | "id">) {
-  const reduced = useReducedMotion();
-  const C = TAGS[as] as typeof motion.div;
-
-  const variants: Variants = {
-    hidden: { opacity: 0, y: reduced ? 0 : y },
-    show: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: reduced ? 0 : 0.8, ease: EASE_OUT },
-    },
-  };
+}: Omit<RevealProps, "delay" | "id" | "start">) {
+  const Tag = as as "div";
 
   return (
-    <C className={className} style={style} variants={variants}>
+    <Tag
+      className={className}
+      style={{ ...style, ["--reveal-y" as string]: `${y}px` } as CSSProperties}
+      data-motion="reveal-item"
+    >
       {children}
-    </C>
+    </Tag>
   );
 }
 
 /**
- * A 2px rule that draws itself left-to-right. Modernist organises the page
- * with dividers, so animating the divider is the most on-system motion the
- * design can carry — it animates the structure, not a decoration.
+ * A 2px rule that draws itself left to right.
+ *
+ * The design organises the page with dividers, so animating the divider is the
+ * most on-system motion available — it animates the structure itself rather
+ * than decorating it.
  */
 export function RuleDraw({
   className,
@@ -167,18 +189,29 @@ export function RuleDraw({
   className?: string;
   delay?: number;
 }) {
-  const reduced = useReducedMotion();
+  const ref = useRef<HTMLSpanElement>(null);
 
-  return (
-    <motion.span
-      aria-hidden="true"
-      className={className}
-      data-motion="rule"
-      initial={{ scaleX: reduced ? 1 : 0 }}
-      whileInView={{ scaleX: 1 }}
-      viewport={{ once: true, amount: 0.9 }}
-      transition={{ duration: reduced ? 0 : 0.9, ease: EASE_OUT, delay }}
-      style={{ transformOrigin: "left center", display: "block" }}
-    />
+  useGSAP(
+    () => {
+      const el = ref.current;
+      if (!el) return;
+      claim(el);
+
+      if (prefersReducedMotion()) {
+        gsap.set(el, { scaleX: 1 });
+        return;
+      }
+
+      gsap.to(el, {
+        scaleX: 1,
+        duration: 1.1,
+        delay,
+        ease: EASE,
+        scrollTrigger: { trigger: el, start: "top 94%", once: true },
+      });
+    },
+    { scope: ref },
   );
+
+  return <span ref={ref} aria-hidden="true" className={className} data-motion="rule" />;
 }

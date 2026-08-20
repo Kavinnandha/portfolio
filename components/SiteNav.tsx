@@ -1,10 +1,9 @@
 "use client";
 
-import { useLenis } from "lenis/react";
-import { AnimatePresence, motion, useMotionValueEvent, useReducedMotion, useScroll } from "motion/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Magnetic from "./motion/Magnetic";
-import { EASE_IN_OUT, EASE_OUT } from "./motion/easing";
+import { EASE, EASE_IO, ScrollTrigger, gsap, prefersReducedMotion, useGSAP } from "./motion/gsap";
+import { useSmoothScroll } from "./motion/SmoothScroll";
 
 const LINKS = [
   { href: "#work", label: "Work" },
@@ -14,49 +13,110 @@ const LINKS = [
 ];
 
 export default function SiteNav() {
-  const reduced = useReducedMotion();
-  const lenis = useLenis();
-  const { scrollY } = useScroll();
+  const ref = useRef<HTMLDivElement>(null);
+  const drawerTl = useRef<gsap.core.Timeline | null>(null);
+  const lenis = useSmoothScroll();
 
-  const [hidden, setHidden] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
-  const [active, setActive] = useState<string>("");
+  const [active, setActive] = useState("");
 
-  // Hide on scroll down, reveal on scroll up — the reader gets the full
-  // viewport while moving forward and the nav back the instant they reverse.
-  useMotionValueEvent(scrollY, "change", (y) => {
-    const prev = scrollY.getPrevious() ?? 0;
-    setScrolled(y > 8);
-    if (open) return;
-    setHidden(y > prev && y > 240);
-  });
-
-  // Scroll spy. `rootMargin` biases the trigger line to a third of the way
-  // down, so the highlight matches the section the reader is actually reading.
+  // The scroll handler needs to know whether the drawer is up, but it is built
+  // once and never rebuilt — reading state through a ref keeps it current
+  // without making the whole GSAP setup depend on a value that toggles.
+  const openRef = useRef(open);
   useEffect(() => {
-    const sections = LINKS.map((l) => document.querySelector(l.href)).filter(
-      (el): el is Element => el != null,
-    );
-    if (!sections.length) return;
+    openRef.current = open;
+  }, [open]);
 
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) setActive(`#${e.target.id}`);
+  useGSAP(
+    () => {
+      const root = ref.current;
+      const nav = root?.querySelector<HTMLElement>(".nav");
+      if (!root || !nav) return;
+
+      /*
+       * Hide on the way down, return on the way up.
+       *
+       * The reader gets the whole viewport while moving forward and the nav
+       * back the instant they reverse — which is also the moment they are most
+       * likely to be looking for it. Held down until 240px so the bar does not
+       * flinch at the top of the page.
+       */
+      if (!prefersReducedMotion()) {
+        const show = gsap.quickTo(nav, "yPercent", { duration: 0.45, ease: EASE });
+        ScrollTrigger.create({
+          start: 0,
+          end: "max",
+          onUpdate: (self) => {
+            nav.classList.toggle("is-scrolled", self.scroll() > 8);
+            if (openRef.current) return;
+            show(self.direction === 1 && self.scroll() > 240 ? -100 : 0);
+          },
         });
-      },
-      { rootMargin: "-33% 0px -60% 0px", threshold: 0 },
-    );
-    sections.forEach((s) => io.observe(s));
-    return () => io.disconnect();
-  }, []);
+      }
+
+      // Scroll spy. The trigger line sits a third of the way down the viewport
+      // so the highlight matches the section being read, not the one whose
+      // first pixel has appeared.
+      LINKS.forEach(({ href }) => {
+        const section = document.querySelector(href);
+        if (!section) return;
+        ScrollTrigger.create({
+          trigger: section,
+          start: "top 33%",
+          end: "bottom 33%",
+          onToggle: (self) => {
+            // Clearing on the way out matters as much as setting on the way
+            // in: past the last tracked section — in the contact block, or the
+            // footer — nothing should be highlighted, and without this the nav
+            // keeps pointing at whatever the reader last passed through.
+            setActive((current) => (self.isActive ? href : current === href ? "" : current));
+          },
+        });
+      });
+
+      // Built once and parked. Playing and reversing one timeline keeps the
+      // drawer's exit as considered as its entrance — and, unlike unmounting
+      // it, cannot strand a half-open panel if a frame is dropped.
+      const items = root.querySelectorAll(".nav-drawer-list li");
+      drawerTl.current = gsap
+        .timeline({ paused: true })
+        // A zero-duration set at the head of the timeline: playing it makes the
+        // panel renderable, and reversing past it puts it back out of the
+        // paint tree entirely rather than leaving a clipped full-screen layer
+        // under the nav's backdrop blur.
+        .set(root.querySelector(".nav-drawer"), { visibility: "visible", pointerEvents: "auto" })
+        .to(root.querySelector(".nav-drawer"), {
+          clipPath: "inset(0% 0% 0% 0%)",
+          duration: 0.6,
+          ease: EASE_IO,
+        })
+        .to(items, { opacity: 1, y: 0, duration: 0.5, stagger: 0.06, ease: EASE }, 0.18)
+        .to(
+          root.querySelector(".nav-drawer-foot"),
+          { opacity: 1, y: 0, duration: 0.5, ease: EASE },
+          0.34,
+        );
+    },
+    { scope: ref },
+  );
 
   // The drawer owns the scroll while it is up.
   useEffect(() => {
-    if (open) lenis?.stop();
-    else lenis?.start();
+    const tl = drawerTl.current;
+    if (!tl) return;
+
+    if (open) {
+      lenis?.stop();
+      tl.timeScale(1).play();
+    } else {
+      lenis?.start();
+      // Out faster than in: an exit that takes as long as the entrance reads
+      // as the interface hesitating.
+      tl.timeScale(1.5).reverse();
+    }
     document.body.classList.toggle("nav-locked", open);
+
     return () => {
       lenis?.start();
       document.body.classList.remove("nav-locked");
@@ -73,13 +133,8 @@ export default function SiteNav() {
   }, [open]);
 
   return (
-    <>
-      <motion.nav
-        className={`nav${scrolled ? " is-scrolled" : ""}`}
-        initial={false}
-        animate={{ y: hidden && !reduced ? "-100%" : "0%" }}
-        transition={{ duration: reduced ? 0 : 0.45, ease: EASE_OUT }}
-      >
+    <div ref={ref}>
+      <nav className="nav">
         <a className="nav-brand" href="#top" onClick={() => setOpen(false)}>
           Kavin Nandha M K
         </a>
@@ -115,60 +170,27 @@ export default function SiteNav() {
           <span aria-hidden="true" />
           <span aria-hidden="true" />
         </button>
-      </motion.nav>
+      </nav>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            id="nav-drawer"
-            className="nav-drawer"
-            initial={{ clipPath: "inset(0 0 100% 0)" }}
-            animate={{ clipPath: "inset(0 0 0% 0)" }}
-            exit={{ clipPath: "inset(0 0 100% 0)" }}
-            transition={{ duration: reduced ? 0 : 0.55, ease: EASE_IN_OUT }}
-          >
-            <motion.ul
-              className="nav-drawer-list"
-              initial="hidden"
-              animate="show"
-              exit="hidden"
-              variants={{
-                hidden: {},
-                show: { transition: { staggerChildren: reduced ? 0 : 0.06, delayChildren: 0.16 } },
-              }}
-            >
-              {LINKS.map((l) => (
-                <motion.li
-                  key={l.href}
-                  variants={{
-                    hidden: { opacity: 0, y: reduced ? 0 : 24 },
-                    show: { opacity: 1, y: 0, transition: { duration: reduced ? 0 : 0.5, ease: EASE_OUT } },
-                  }}
-                >
-                  <a href={l.href} onClick={() => setOpen(false)}>
-                    {l.label}
-                  </a>
-                </motion.li>
-              ))}
-              <motion.li
-                variants={{
-                  hidden: { opacity: 0, y: reduced ? 0 : 24 },
-                  show: { opacity: 1, y: 0, transition: { duration: reduced ? 0 : 0.5, ease: EASE_OUT } },
-                }}
-              >
-                <a href="#contact" onClick={() => setOpen(false)}>
-                  Get in touch
-                </a>
-              </motion.li>
-            </motion.ul>
+      {/* Always in the tree, clipped shut. `inert` is what keeps a closed
+          drawer out of the tab order and away from screen readers — a panel
+          that is merely invisible is still focusable. */}
+      <div id="nav-drawer" className="nav-drawer" inert={!open}>
+        <ul className="nav-drawer-list">
+          {[...LINKS, { href: "#contact", label: "Get in touch" }].map((l) => (
+            <li key={l.href}>
+              <a href={l.href} onClick={() => setOpen(false)}>
+                {l.label}
+              </a>
+            </li>
+          ))}
+        </ul>
 
-            <div className="nav-drawer-foot">
-              <a href="mailto:kavinnandhakavin@gmail.com">kavinnandhakavin@gmail.com</a>
-              <a href="tel:+919345569707">+91 93455 69707</a>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+        <div className="nav-drawer-foot">
+          <a href="mailto:kavinnandhakavin@gmail.com">kavinnandhakavin@gmail.com</a>
+          <a href="tel:+919345569707">+91 93455 69707</a>
+        </div>
+      </div>
+    </div>
   );
 }

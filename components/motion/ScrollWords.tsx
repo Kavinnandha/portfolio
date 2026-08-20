@@ -1,41 +1,19 @@
 "use client";
 
-import {
-  motion,
-  useReducedMotion,
-  useScroll,
-  useTransform,
-  type MotionValue,
-} from "motion/react";
 import { useRef } from "react";
+import { SplitText, claim, gsap, prefersReducedMotion, useGSAP } from "./gsap";
 
 /**
  * Word-by-word reveal driven by scroll *position*, not by a timer.
  *
- * The distinction matters: the copy resolves exactly as fast as the reader
- * scrolls, and it un-resolves if they scroll back. That reciprocity is what
- * makes the effect feel like the page is responding rather than performing,
- * and it is the signature scroll move on both reference sites.
+ * The distinction is the whole point: the copy resolves exactly as fast as the
+ * reader scrolls, and un-resolves if they scroll back. That reciprocity is
+ * what makes the page feel like it is answering rather than performing.
+ *
+ * The dim resting state is painted by CSS on the container, and swapped for
+ * per-word opacity in the same frame the split happens — so the reader never
+ * sees the sentence at full strength and then watch it drop back.
  */
-function Word({
-  children,
-  progress,
-  range,
-  dim,
-}: {
-  children: string;
-  progress: MotionValue<number>;
-  range: [number, number];
-  dim: number;
-}) {
-  const opacity = useTransform(progress, range, [dim, 1]);
-  return (
-    <motion.span className="scroll-word" style={{ opacity }}>
-      {children}
-    </motion.span>
-  );
-}
-
 export default function ScrollWords({
   text,
   className,
@@ -49,18 +27,50 @@ export default function ScrollWords({
   dim?: number;
 }) {
   const ref = useRef<HTMLElement>(null);
-  const reduced = useReducedMotion();
-
-  // Start once the block is well into the viewport and finish before it
-  // leaves, so the last word lands while the reader is still looking at it.
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start 0.85", "end 0.55"],
-  });
-
-  const words = text.split(" ");
   const Tag = as;
-  const resting = reduced ? 1 : dim;
+
+  useGSAP(
+    () => {
+      const el = ref.current;
+      if (!el) return;
+      claim(el);
+
+      if (prefersReducedMotion()) {
+        gsap.set(el, { opacity: 1 });
+        return;
+      }
+
+      const split = SplitText.create(el, {
+        type: "words",
+        wordsClass: "scroll-word",
+        // Words never re-wrap into different words, but the container's own
+        // line breaks change on resize; autoSplit keeps the DOM honest.
+        autoSplit: true,
+        onSplit: (self) => {
+          gsap.set(el, { opacity: 1 });
+          return gsap.fromTo(
+            self.words,
+            { opacity: dim },
+            {
+              opacity: 1,
+              ease: "none",
+              stagger: 0.4,
+              duration: 1,
+              scrollTrigger: {
+                trigger: el,
+                start: "top 82%",
+                end: "bottom 58%",
+                scrub: 0.6,
+              },
+            },
+          );
+        },
+      });
+
+      return () => split.revert();
+    },
+    { scope: ref },
+  );
 
   return (
     <Tag
@@ -68,16 +78,7 @@ export default function ScrollWords({
       className={className}
       data-motion="words"
     >
-      {words.map((word, i) => (
-        <Word
-          key={`${word}-${i}`}
-          progress={scrollYProgress}
-          range={[i / words.length, (i + 1) / words.length]}
-          dim={resting}
-        >
-          {word}
-        </Word>
-      ))}
+      {text}
     </Tag>
   );
 }

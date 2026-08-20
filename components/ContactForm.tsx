@@ -1,14 +1,13 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
 import { useRef, useState, type FormEvent } from "react";
 import Magnetic from "./motion/Magnetic";
-import { EASE_OUT } from "./motion/easing";
+import { EASE, gsap, prefersReducedMotion, useGSAP } from "./motion/gsap";
 
 export default function ContactForm() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
-  const reduced = useReducedMotion();
+  const scope = useRef<HTMLDivElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const msgRef = useRef<HTMLTextAreaElement>(null);
@@ -36,24 +35,54 @@ export default function ContactForm() {
   };
 
   /*
-   * Entrance only — deliberately no `AnimatePresence` here.
+   * Entrance only, and deliberately so.
    *
    * An exit animation would make the outgoing panel's removal depend on the
    * frame loop finishing it. In a throttled or backgrounded tab those frames
    * never arrive, and the reader would submit the form and keep staring at the
    * form. The incoming panel is what the eye actually reads, so animating only
    * that costs nothing and cannot strand the UI in the old state.
+   *
+   * `revertOnUpdate` matters here: without it, swapping panels would leave the
+   * previous panel's tweens recorded in the same context, and each pass would
+   * add another.
    */
-  const panel = {
-    initial: { opacity: 0, y: reduced ? 0 : 16 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: reduced ? 0 : 0.45, ease: EASE_OUT },
-  };
+  useGSAP(
+    () => {
+      if (prefersReducedMotion()) return;
+      const panel = scope.current?.firstElementChild;
+      if (!panel) return;
+
+      gsap.from(panel, { opacity: 0, y: 16, duration: 0.55, ease: EASE });
+      gsap.from(panel.querySelectorAll(".field, .form-submit, .form-sent-action"), {
+        opacity: 0,
+        y: 12,
+        duration: 0.5,
+        stagger: 0.07,
+        ease: EASE,
+        delay: 0.08,
+      });
+    },
+    { scope, dependencies: [sent], revertOnUpdate: true },
+  );
+
+  useGSAP(
+    () => {
+      if (!error || prefersReducedMotion()) return;
+      gsap.from(scope.current?.querySelector(".form-error") ?? [], {
+        opacity: 0,
+        y: -6,
+        duration: 0.35,
+        ease: EASE,
+      });
+    },
+    { scope, dependencies: [error], revertOnUpdate: true },
+  );
 
   return (
-    <>
+    <div ref={scope}>
       {sent ? (
-        <motion.div key="sent" className="form-sent" {...panel}>
+        <div className="form-sent">
           <span className="kicker-sm" style={{ marginBottom: 16 }}>
             Sent
           </span>
@@ -67,9 +96,9 @@ export default function ContactForm() {
               Send another
             </button>
           </Magnetic>
-        </motion.div>
+        </div>
       ) : (
-        <motion.form key="form" className="contact-form" onSubmit={submit} noValidate {...panel}>
+        <form className="contact-form" onSubmit={submit} noValidate>
           <span className="kicker-sm" style={{ marginBottom: 0 }}>
             Or send a note
           </span>
@@ -111,16 +140,9 @@ export default function ContactForm() {
           </div>
 
           {error ? (
-            <motion.p
-              key={error}
-              role="alert"
-              className="form-error"
-              initial={{ opacity: 0, y: reduced ? 0 : -6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: reduced ? 0 : 0.3, ease: EASE_OUT }}
-            >
+            <p role="alert" className="form-error">
               {error}
-            </motion.p>
+            </p>
           ) : null}
 
           <Magnetic strength={12} className="form-submit">
@@ -128,8 +150,8 @@ export default function ContactForm() {
               Send it
             </button>
           </Magnetic>
-        </motion.form>
+        </form>
       )}
-    </>
+    </div>
   );
 }

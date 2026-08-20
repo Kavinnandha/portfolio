@@ -80,6 +80,14 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Lenis stamps this class on <html> while it is driving the scroll. Native
+   smooth behaviour has to be off then, or the browser and Lenis fight over the
+   same scroll position and every anchor jump stutters. The rule above is what
+   is left for readers without JavaScript. */
+html.lenis {
+  scroll-behavior: auto;
+}
+
 body {
   margin: 0;
   background: var(--color-bg);
@@ -339,10 +347,23 @@ textarea.input {
 .mask-line {
   display: block;
   overflow: hidden;
+  /* The clip is the effect, but it must not eat the descenders of the type it
+     is clipping. Padding pushes the box below the baseline and the matching
+     negative margin gives the space back to the layout. */
+  padding-bottom: 0.14em;
+  margin-bottom: -0.14em;
 }
 
 .mask-line > span {
   display: block;
+  /* The resting pose for every masked line: fully clipped below its own box,
+     so the prerendered HTML is already in position before any script has run.
+     The skew that goes with it is set in JavaScript, not here — a computed
+     transform is a matrix, and a matrix decomposes to rotation and skewX, so a
+     skewY written in CSS is a value GSAP can never read back or animate away. */
+  transform: translateY(112%);
+  transform-origin: left top;
+  will-change: transform;
 }
 
 .scrollpulse {
@@ -1036,23 +1057,79 @@ textarea.input {
   border: 0;
 }
 
-/* — intro curtain — */
+/* — intro curtain — an accent field that breaks into vertical slats and lifts
+     off the top of the page in a stagger, so the hero is uncovered in strips
+     rather than by one sheet sliding away — */
 .intro {
   position: fixed;
   inset: 0;
   z-index: 100;
   display: grid;
   place-items: center;
-  background: var(--color-accent);
   color: var(--color-bg);
+  pointer-events: none;
+}
+
+/* The slats are the curtain. They are a layer of their own so the mark can
+   ride above them and leave on its own timing. */
+.intro-slats {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+
+.intro-slat {
+  flex: 1;
+  height: 100%;
+  background: var(--color-accent);
+  /* A hair of overlap: sub-pixel rounding between neighbours would otherwise
+     show the page through as a set of hairlines mid-lift. */
+  margin-right: -1px;
   will-change: transform;
 }
 
+.intro-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 0 var(--gutter);
+  text-align: center;
+}
+
 .intro-mark {
+  display: block;
   font-family: var(--font-heading);
   font-weight: var(--font-heading-weight);
   font-size: clamp(20px, 4.4vw, 34px);
   letter-spacing: -0.02em;
+}
+
+.intro-sub {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin-top: 10px;
+  opacity: 0.72;
+}
+
+.intro-rule {
+  display: block;
+  width: min(220px, 42vw);
+  height: 2px;
+  background: color-mix(in srgb, #f3f2f2 70%, transparent);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+/* Belt and braces alongside `lenis.stop()`: a reader on a trackpad can start a
+   gesture before the JavaScript that stops the scroll has run. */
+body.intro-locked {
+  overflow: hidden;
 }
 
 /* — pointer-tracking wrapper — */
@@ -1644,30 +1721,210 @@ body {
 }
 
 @media (max-width: 700px) {
-  /* On a phone the hero is nearly all headline — the composition sits behind
-     the type instead of beside it, so it has to pull right back. */
-  .hero-coin-4,
-  .hero-coin-5 {
-    display: none;
-  }
-
-  .hero-backdrop {
-    opacity: 0.55;
+  /* On a phone the hero is nearly all headline — the grid sits behind the type
+     instead of beside it, so it has to pull right back. */
+  .hero-canvas {
     -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 46%);
     mask-image: linear-gradient(to bottom, transparent 0%, #000 46%);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-backdrop * {
-    animation: none !important;
-  }
-
   .stack-card {
     transform: none !important;
   }
 
   .stack-veil {
     opacity: 0 !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Resting states — the pose every GSAP entrance animates *out* of.
+
+   These live in CSS rather than in an inline style written at render for one
+   reason: the HTML is prerendered, and a state applied by JavaScript arrives a
+   frame or two after first paint. That gap is exactly long enough for the
+   reader to see a headline, then watch it be yanked back to animate in.
+
+   The rule is therefore: hide here, reveal in GSAP, and never write a resting
+   state twice. The `<noscript>` block in the layout and the failsafe sweep in
+   SmoothScroll are the two ways out if the reveal never comes.
+
+   Percentages are avoided in transforms that GSAP will later animate — a
+   computed transform is always a pixel matrix, so a percentage resting offset
+   can only be tweened back through `y`, never through `yPercent`. The masked
+   lines are the one deliberate exception, and their tweens use `y`.
+   ══════════════════════════════════════════════════════════════════════ */
+
+[data-motion="reveal"],
+[data-motion="reveal-item"] {
+  opacity: 0;
+  transform: translate3d(0, var(--reveal-y, 28px), 0);
+}
+
+[data-motion="rule"] {
+  display: block;
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+/* The scroll-linked sentence rests dim as a whole, so the split into words
+   costs nothing visually — the reader never sees it at full strength first. */
+[data-motion="words"] {
+  opacity: 0.18;
+}
+
+/* — hero: every part of the opening shot waits for the master timeline — */
+.hero-canvas {
+  opacity: 0;
+}
+
+.hero-inner {
+  will-change: transform;
+}
+
+.hero-eyebrow {
+  opacity: 0;
+  transform: translate3d(0, 18px, 0);
+}
+
+.hero-dot {
+  transform: scale(0);
+}
+
+.hero-actions .magnetic {
+  opacity: 0;
+  transform: translate3d(0, 22px, 0);
+}
+
+.hero-foot {
+  opacity: 0;
+  transform: translate3d(0, 16px, 0);
+}
+
+/* SplitText writes this class onto each line of the hero paragraph; the mask
+   wrapper it generates around them does the clipping. */
+.hero-lede-line {
+  will-change: transform;
+}
+
+/* — nav drawer: clipped shut rather than unmounted, so its exit is animated
+     and can never be stranded half-open by a dropped frame — */
+.nav-drawer {
+  /* All four sides, all in the same unit. GSAP interpolates a clip-path by
+     walking the numbers inside the string, so start and end have to be the
+     same shape — `inset(0 0 100% 0)` computes to a three-value form that does
+     not line up with a four-value target, and the bottom edge never moves. */
+  clip-path: inset(0% 0% 100% 0%);
+  pointer-events: none;
+  /* Clipping alone would keep a full-viewport fixed panel in the paint tree,
+     directly beneath a backdrop-filtered nav — the browser would blur over it
+     on every frame of every scroll. `visibility` takes the whole subtree out
+     of rendering; GSAP flips it back on as the first step of the open. */
+  visibility: hidden;
+}
+
+.nav-drawer-list li {
+  opacity: 0;
+  transform: translate3d(0, 24px, 0);
+}
+
+.nav-drawer-foot {
+  opacity: 0;
+  transform: translate3d(0, 16px, 0);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Cursor — a hard accent square on the pointer and a hairline ring trailing
+   behind it. The lag between the two is the effect: the square says where the
+   pointer is, the ring says where it has been.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 90;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.cursor-dot,
+.cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: block;
+  /* Centred on the pointer without a second transform channel: GSAP owns x and
+     y, so the offset has to come from margin rather than from translate. */
+  pointer-events: none;
+  will-change: transform;
+}
+
+.cursor-dot {
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  background: var(--color-accent);
+}
+
+.cursor-ring {
+  width: 30px;
+  height: 30px;
+  margin: -15px 0 0 -15px;
+  border: 2px solid color-mix(in srgb, var(--color-text) 45%, transparent);
+  transition: border-color 0.3s ease;
+}
+
+.cursor-ring.is-active {
+  border-color: var(--color-accent);
+}
+
+/* Only once the real cursor has taken over — added by the component, so a
+   reader whose JavaScript never runs is never left without a pointer. */
+body.has-cursor,
+body.has-cursor a,
+body.has-cursor button,
+body.has-cursor input,
+body.has-cursor textarea,
+body.has-cursor .magnetic {
+  cursor: none;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Reduced motion — CSS reveals everything itself here, rather than waiting for
+   GSAP to do it. Nothing on this page may depend on an animation running for
+   its content to be readable.
+   ══════════════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  [data-motion="reveal"],
+  [data-motion="reveal-item"],
+  [data-motion="words"],
+  .hero-canvas,
+  .hero-eyebrow,
+  .hero-dot,
+  .hero-foot,
+  .hero-actions .magnetic,
+  .mask-line > span {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  [data-motion="rule"] {
+    transform: scaleX(1) !important;
+  }
+
+  .cursor,
+  .intro {
+    display: none !important;
+  }
+
+  body.has-cursor,
+  body.has-cursor a,
+  body.has-cursor button {
+    cursor: auto;
   }
 }

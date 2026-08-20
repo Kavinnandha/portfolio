@@ -1,13 +1,17 @@
 "use client";
 
-import { motion, useMotionValue, useReducedMotion, useSpring } from "motion/react";
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
-import { POINTER_SPRING } from "./easing";
+import { useRef } from "react";
+import { gsap, hasFinePointer, prefersReducedMotion, useGSAP } from "./gsap";
 
 /**
- * Magnetic pull toward the cursor, carried over from the design canvas but
- * rebuilt on springs so the element settles instead of snapping back.
+ * Magnetic pull toward the cursor.
+ *
+ * `quickTo` rather than a tween per `mousemove`: it reuses one tween instance
+ * and only overwrites its end value, so a fast drag across a row of buttons
+ * costs a handful of property writes instead of a new tween sixty times a
+ * second. The easing is what makes it feel weighted — the control chases the
+ * pointer and settles rather than tracking it rigidly.
  *
  * Gated on a real hover-capable pointer: on touch, `mousemove` fires once on
  * tap and would leave the control permanently offset. Vertical travel is
@@ -23,47 +27,43 @@ export default function Magnetic({
   className?: string;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
-  const reduced = useReducedMotion();
-  const [canHover, setCanHover] = useState(false);
 
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-  const x = useSpring(mx, POINTER_SPRING);
-  const y = useSpring(my, POINTER_SPRING);
+  useGSAP(
+    () => {
+      const el = ref.current;
+      if (!el) return;
+      if (!hasFinePointer() || prefersReducedMotion()) return;
 
-  useEffect(() => {
-    const mq = window.matchMedia("(hover: hover) and (pointer: fine)");
-    const sync = () => setCanHover(mq.matches);
-    sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
-  }, []);
+      const xTo = gsap.quickTo(el, "x", { duration: 0.55, ease: "power3.out" });
+      const yTo = gsap.quickTo(el, "y", { duration: 0.55, ease: "power3.out" });
 
-  const active = canHover && !reduced;
+      const onMove = (event: PointerEvent) => {
+        const r = el.getBoundingClientRect();
+        const dx = (event.clientX - (r.left + r.width / 2)) / (r.width / 2);
+        const dy = (event.clientY - (r.top + r.height / 2)) / (r.height / 2);
+        xTo(dx * strength);
+        yTo(dy * strength * 0.6);
+      };
 
-  const onMove = (e: React.MouseEvent<HTMLSpanElement>) => {
-    if (!active || !ref.current) return;
-    const r = ref.current.getBoundingClientRect();
-    const dx = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
-    const dy = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
-    mx.set(dx * strength);
-    my.set(dy * strength * 0.6);
-  };
+      const onLeave = () => {
+        xTo(0);
+        yTo(0);
+      };
 
-  const onLeave = () => {
-    mx.set(0);
-    my.set(0);
-  };
+      el.addEventListener("pointermove", onMove);
+      el.addEventListener("pointerleave", onLeave);
+
+      return () => {
+        el.removeEventListener("pointermove", onMove);
+        el.removeEventListener("pointerleave", onLeave);
+      };
+    },
+    { scope: ref },
+  );
 
   return (
-    <motion.span
-      ref={ref}
-      className={`magnetic ${className ?? ""}`.trim()}
-      style={{ x, y }}
-      onMouseMove={onMove}
-      onMouseLeave={onLeave}
-    >
+    <span ref={ref} className={`magnetic ${className ?? ""}`.trim()}>
       {children}
-    </motion.span>
+    </span>
   );
 }
