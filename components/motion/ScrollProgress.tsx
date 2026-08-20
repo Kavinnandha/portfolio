@@ -1,52 +1,23 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { gsap, initGsap, ScrollTrigger } from "@/lib/gsap";
+import { motion, useScroll, useSpring } from "motion/react";
 
 /**
- * Read-out for how far down the page you are: a hairline across the top, and
- * a percentage in the corner.
- *
- * Both come off one ScrollTrigger driving the whole document, so the bar and
- * the number can never disagree.
+ * The 3px accent rule across the top. Driven by `scaleX` on a full-width bar
+ * rather than an animated `width`, so it runs on the compositor and never
+ * triggers layout.
  */
 export default function ScrollProgress() {
-  const bar = useRef<HTMLSpanElement>(null);
-  const value = useRef<HTMLSpanElement>(null);
-
-  useEffect(() => {
-    initGsap();
-    const barEl = bar.current;
-    if (!barEl) return;
-
-    const setScale = gsap.quickSetter(barEl, "scaleX");
-    let shown = -1;
-
-    const trigger = ScrollTrigger.create({
-      start: 0,
-      end: "max",
-      onUpdate: (self) => {
-        setScale(self.progress);
-        const pct = Math.round(self.progress * 100);
-        if (pct !== shown && value.current) {
-          shown = pct;
-          value.current.textContent = String(pct).padStart(2, "0");
-        }
-      },
-    });
-
-    return () => trigger.kill();
-  }, []);
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 260,
+    damping: 40,
+    restDelta: 0.0005,
+  });
 
   return (
-    <>
-      <div className="progress" aria-hidden="true">
-        <span className="progress-bar" ref={bar} />
-      </div>
-      <p className="progress-read" aria-hidden="true">
-        <span ref={value}>00</span>
-        <span className="progress-read-unit">%</span>
-      </p>
-    </>
+    <div className="progress-track" aria-hidden="true">
+      <motion.div className="progress-bar" style={{ scaleX }} />
+    </div>
   );
 }

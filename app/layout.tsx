@@ -1,25 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Archivo, JetBrains_Mono } from "next/font/google";
+import { Archivo } from "next/font/google";
 import "lenis/dist/lenis.css";
 import "./globals.css";
-import SiteNav from "@/components/SiteNav";
-import Cursor from "@/components/motion/Cursor";
-import MotionRoot from "@/components/motion/MotionRoot";
-import Preloader from "@/components/motion/Preloader";
 import ScrollProgress from "@/components/motion/ScrollProgress";
 import SmoothScroll from "@/components/motion/SmoothScroll";
 
 const archivo = Archivo({
   variable: "--font-archivo",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "800", "900"],
-  display: "swap",
-});
-
-const mono = JetBrains_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
-  weight: ["400", "500"],
+  weight: ["400", "500", "600", "700", "800", "900"],
   display: "swap",
 });
 
@@ -58,36 +47,46 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#08070a",
+  themeColor: "#f3f2f2",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    /*
-      Lenis stamps `lenis lenis-smooth` onto the root element as soon as it
-      initialises, which React sees as an attribute it did not write. The
-      warning is suppressed for this one element only — nothing about the
-      root's markup is actually generated differently on the two sides.
-    */
-    <html
-      lang="en"
-      className={`${archivo.variable} ${mono.variable}`}
-      suppressHydrationWarning
-    >
+    <html lang="en" className={archivo.variable}>
       <body>
-        <SmoothScroll>
-          <Preloader />
-          <Cursor />
-          <ScrollProgress />
+        {/*
+          Every scroll-driven entrance ships its resting state as an inline
+          `opacity: 0` in the prerendered HTML, and the pipeline slab shows one
+          card at a time out of five. If the JavaScript never runs, that HTML
+          renders a mostly empty page — so without a script engine we force
+          everything visible and unstack the deck.
+        */}
+        <noscript>
+          <style>{`
+            [data-motion] { opacity: 1 !important; transform: none !important; }
+            [data-motion="mask"] span { transform: none !important; }
+            .progress-track { display: none !important; }
+            .count-anim { display: none !important; }
+            .count-true {
+              position: static !important; width: auto !important; height: auto !important;
+              margin: 0 !important; clip-path: none !important; white-space: normal !important;
+            }
+            .pipeline { height: auto !important; }
+            .pipeline-sticky { position: static !important; height: auto !important; min-height: 0 !important; }
+            .steps { display: grid !important; gap: 14px !important; min-height: 0 !important; }
+            .step { position: static !important; opacity: 1 !important; transform: none !important; }
+            .rail-fill { transform: none !important; }
+            .stack-slot { position: static !important; }
+            .stack-veil { display: none !important; }
+          `}</style>
+        </noscript>
 
-          <a className="skip-link" href="#top">
-            Skip to content
-          </a>
+        <a className="skip-link" href="#top">
+          Skip to content
+        </a>
 
-          <SiteNav />
-          {children}
-          <MotionRoot />
-        </SmoothScroll>
+        <ScrollProgress />
+        <SmoothScroll>{children}</SmoothScroll>
       </body>
     </html>
   );
