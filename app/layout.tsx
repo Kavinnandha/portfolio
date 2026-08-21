@@ -73,8 +73,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             }
             .pipeline { height: auto !important; }
             .pipeline-sticky { position: static !important; height: auto !important; min-height: 0 !important; }
-            .steps { display: grid !important; gap: 14px !important; min-height: 0 !important; }
-            .step { position: static !important; opacity: 1 !important; transform: none !important; }
+            .steps { display: grid !important; grid-template-areas: none !important; gap: 14px !important; min-height: 0 !important; }
+            .step { grid-area: auto !important; opacity: 1 !important; transform: none !important; }
             .rail-fill { transform: none !important; }
             .stack-slot { position: static !important; }
             .stack-veil { display: none !important; }

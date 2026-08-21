@@ -11,6 +11,10 @@
   --color-accent: #ec3013;
   --color-accent-2: #e15b47;
   --color-divider: color-mix(in srgb, #201e1d 40%, transparent);
+  /* The one non-brand hue on the page. It is reserved for state — a healthy
+     check, an uptime switch — and never used decoratively, so its meaning
+     stays legible wherever it appears. */
+  --color-ok: #16a34a;
 
   /* Tonal ramps — generated in OKLCH on one shared lightness scale, so the
      same step of any role matches the others in visual value. */
@@ -259,6 +263,21 @@ button {
    hero is behind you.
    ══════════════════════════════════════════════════════════════════════════ */
 
+/*
+ * The bar morphs from full-bleed to a floating pill by animating the *wrapper's
+ * padding*, never the bar's own width.
+ *
+ * `max-width: none -> 1180px` is what this used to do, and `none` has no
+ * numeric form, so it snapped. Even swapping in a huge px start would stall:
+ * the used width is `min(100%, max-width)`, so nothing visibly moves until the
+ * cap crosses the viewport, then it lurches. Padding on the wrapper has no such
+ * dead zone — the bar is always exactly its container, and squeezing the
+ * container is a single interpolable length.
+ *
+ * Two branches rather than one `max()` so both endpoints are plain values: a
+ * side gutter while the pill is narrower than the page, and a centring inset
+ * once the page is wide enough for the measure to matter.
+ */
 .nav-wrap {
   position: fixed;
   inset: 0 0 auto 0;
@@ -266,41 +285,47 @@ button {
   display: flex;
   justify-content: center;
   padding: 0;
-  transition: padding 0.5s var(--ease-out);
+  transition: padding 0.62s var(--ease-out);
 }
 
 .nav-wrap.is-condensed {
-  padding: 12px clamp(12px, 2vw, 20px) 0;
+  padding: 12px clamp(12px, 2vw, 22px) 0;
+}
+
+@media (min-width: 1230px) {
+  .nav-wrap.is-condensed {
+    padding: 12px calc((100% - var(--measure)) / 2) 0;
+  }
 }
 
 .nav {
   position: relative;
   width: 100%;
-  max-width: none;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 14px clamp(18px, 3vw, 34px);
   border-radius: 0;
-  background: color-mix(in srgb, var(--color-bg) 76%, transparent);
+  background: color-mix(in srgb, var(--color-bg) 72%, transparent);
   backdrop-filter: blur(20px) saturate(1.5);
   -webkit-backdrop-filter: blur(20px) saturate(1.5);
   border: 1px solid transparent;
   border-bottom-color: color-mix(in srgb, var(--color-text) 10%, transparent);
+  box-shadow: 0 0 0 0 transparent;
   transition:
-    max-width 0.55s var(--ease-out),
-    border-radius 0.55s var(--ease-out),
-    padding 0.45s var(--ease-out),
-    box-shadow 0.45s ease,
-    border-color 0.45s ease;
+    border-radius 0.62s var(--ease-out),
+    padding 0.62s var(--ease-out),
+    background 0.5s ease,
+    box-shadow 0.5s ease,
+    border-color 0.5s ease;
 }
 
 .nav.is-condensed {
-  max-width: var(--measure);
   border-radius: var(--pill);
   padding: 9px 10px 9px 18px;
+  background: color-mix(in srgb, var(--color-bg) 84%, transparent);
   border-color: color-mix(in srgb, var(--color-text) 12%, transparent);
-  box-shadow: 0 14px 40px -22px color-mix(in srgb, var(--color-text) 55%, transparent);
+  box-shadow: 0 18px 44px -22px color-mix(in srgb, var(--color-text) 58%, transparent);
 }
 
 .nav-brand {
@@ -422,12 +447,13 @@ button {
   top: calc(100% + 8px);
   left: clamp(18px, 3vw, 34px);
   opacity: 0;
+  /* Anchored to the bar's inline padding, which is itself mid-morph — without
+     this the panel jumps to its new anchor while the bar is still travelling. */
+  transition-property: opacity, transform, visibility, left;
   visibility: hidden;
   transform: translateY(-10px) scale(0.985);
-  transition:
-    opacity 0.35s ease,
-    transform 0.45s var(--ease-out),
-    visibility 0.35s;
+  transition-duration: 0.35s, 0.45s, 0.35s, 0.62s;
+  transition-timing-function: ease, var(--ease-out), linear, var(--ease-out);
   border-radius: 26px;
   background: color-mix(in srgb, var(--color-bg) 92%, transparent);
   backdrop-filter: blur(24px) saturate(1.4);
@@ -441,6 +467,10 @@ button {
   opacity: 1;
   visibility: visible;
   transform: translateY(0) scale(1);
+}
+
+.nav.is-condensed .nav-panel {
+  left: 18px;
 }
 
 .nav-panel-work {
@@ -619,25 +649,49 @@ body.nav-locked {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   Hero
+   Hero — one centred headline on a soft field, with a cluster of floating
+   objects fanned out on either side of it.
+
+   The type is the subject; the cluster is the caption. So the copy sits in
+   flow at the centre of the section and every object is absolutely placed
+   around it, never in its column — nothing in `.hero-stage` is allowed to
+   change where a single line of the headline breaks.
    ══════════════════════════════════════════════════════════════════════════ */
 
 .hero {
   position: relative;
   min-height: 100svh;
-  display: flex;
-  align-items: center;
+  display: grid;
+  place-items: center;
   overflow: hidden;
+  isolation: isolate;
   border-radius: 0 0 var(--radius-slab) var(--radius-slab);
+  background: var(--color-neutral-100);
 }
 
-.hero-canvas {
+/* The ground. Three very wide, very faint washes rather than one gradient, so
+   the field has a centre of gravity under the type and still goes quiet at the
+   edges where the objects sit. */
+.hero-wash {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
+  inset: -10% -6%;
   pointer-events: none;
+  background:
+    radial-gradient(
+      52% 46% at 50% 34%,
+      color-mix(in srgb, var(--color-accent) 12%, transparent) 0%,
+      transparent 68%
+    ),
+    radial-gradient(
+      40% 40% at 12% 76%,
+      color-mix(in srgb, var(--color-accent-400) 20%, transparent) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      44% 44% at 90% 22%,
+      color-mix(in srgb, var(--color-text) 9%, transparent) 0%,
+      transparent 72%
+    );
 }
 
 /* Fractal grain, inlined as a data URI so the field never posterises on a
@@ -646,50 +700,320 @@ body.nav-locked {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.055;
+  opacity: 0.05;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/></filter><rect width='180' height='180' filter='url(%23n)'/></svg>");
 }
 
+/* ── the floating cluster ─────────────────────────────────────────────── */
+
+.hero-stage {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* One knob drives the whole cluster's size, so a breakpoint can shrink ten
+     objects by editing a single number instead of ten. */
+  --tile-unit: clamp(112px, 12.4vw, 186px);
+}
+
+.tile {
+  position: absolute;
+  left: var(--tx);
+  top: var(--ty);
+  width: calc(var(--tile-unit) * var(--tw));
+  translate: -50% -50%;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
+/* The idle float lives on an inner element. The outer one is owned by Motion
+   (entrance, pointer, scroll) and a CSS animation on the same node would be
+   overwritten every frame. */
+.tile-drift {
+  display: block;
+  animation: tile-float 9s ease-in-out infinite;
+}
+
+@keyframes tile-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-11px) rotate(1.4deg);
+  }
+}
+
+/* — labelled cards, the left fan — */
+
+.tile-card .tile-drift {
+  display: grid;
+  gap: 6px;
+  padding: 16px 16px 15px;
+  border-radius: 20px;
+  box-shadow:
+    0 26px 50px -26px color-mix(in srgb, var(--color-text) 62%, transparent),
+    0 2px 6px -2px color-mix(in srgb, var(--color-text) 30%, transparent);
+}
+
+.tile-card.is-paper .tile-drift {
+  background: #fff;
+  color: var(--color-text);
+}
+
+.tile-card.is-ink .tile-drift {
+  background: var(--color-text);
+  color: var(--color-neutral-100);
+}
+
+.tile-card.is-accent .tile-drift {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.tile-mark {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  margin-bottom: 4px;
+}
+
+.tile-mark svg {
+  width: 17px;
+  height: 17px;
+}
+
+.tile-mark.is-ink {
+  background: var(--color-text);
+  color: #fff;
+}
+
+.tile-mark.is-paper {
+  background: #fff;
+  color: var(--color-text);
+}
+
+.tile-mark.is-glass {
+  background: color-mix(in srgb, #fff 24%, transparent);
+  color: #fff;
+}
+
+.tile-name {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: clamp(11px, 0.94vw, 14px);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.tile-sub {
+  font-size: clamp(9.5px, 0.76vw, 11.5px);
+  line-height: 1.35;
+  opacity: 0.66;
+  font-variant-numeric: tabular-nums;
+}
+
+/* — the terminal — */
+
+.tile-shell .tile-drift {
+  display: grid;
+  gap: 5px;
+  padding: 13px 15px 15px;
+  border-radius: 16px;
+  background: var(--color-neutral-900);
+  color: var(--color-neutral-200);
+  box-shadow: 0 30px 54px -28px color-mix(in srgb, var(--color-text) 72%, transparent);
+}
+
+.shell-dots {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.shell-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--pill);
+  background: color-mix(in srgb, #fff 26%, transparent);
+}
+
+.shell-dots i:first-child {
+  background: var(--color-accent);
+}
+
+.shell-line {
+  font-family: ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, monospace;
+  font-size: clamp(8.5px, 0.68vw, 10.5px);
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.shell-line.is-ok {
+  color: var(--color-ok);
+}
+
+.shell-prompt {
+  color: var(--color-accent-400);
+}
+
+/* — the pointer, borrowed from the reader — */
+
+.tile-cursor .tile-drift {
+  filter: drop-shadow(0 8px 14px color-mix(in srgb, var(--color-text) 45%, transparent));
+}
+
+.tile-cursor svg {
+  width: 100%;
+  height: auto;
+}
+
+/* — the uptime switch — */
+
+.tile-toggle .tile-drift {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 13px 14px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 24px 46px -26px color-mix(in srgb, var(--color-text) 62%, transparent);
+}
+
+.toggle-track {
+  display: block;
+  width: 100%;
+  max-width: 74px;
+  aspect-ratio: 2 / 1;
+  border-radius: var(--pill);
+  background: var(--color-ok);
+  padding: 10%;
+  box-shadow: inset 0 2px 5px color-mix(in srgb, var(--color-text) 22%, transparent);
+}
+
+.toggle-track i {
+  display: block;
+  height: 100%;
+  aspect-ratio: 1;
+  margin-left: auto;
+  border-radius: var(--pill);
+  background: #fff;
+  animation: toggle-nudge 5.5s ease-in-out infinite;
+}
+
+@keyframes toggle-nudge {
+  0%,
+  86%,
+  100% {
+    transform: translateX(0);
+  }
+  92% {
+    transform: translateX(-8%);
+  }
+}
+
+/* — single-glyph squares — */
+
+.tile-glyph .tile-drift {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border-radius: 22px;
+  box-shadow: 0 24px 46px -24px color-mix(in srgb, var(--color-text) 66%, transparent);
+}
+
+.tile-glyph.is-ink .tile-drift {
+  background: var(--color-text);
+}
+
+.tile-glyph.is-paper .tile-drift {
+  background: #fff;
+}
+
+.tile-glyph.is-accent .tile-drift {
+  background: var(--color-accent);
+}
+
+.glyph {
+  display: block;
+  width: 46%;
+}
+
+.glyph svg {
+  width: 100%;
+  height: auto;
+}
+
+.glyph.is-hot {
+  color: #ffc53d;
+}
+
+.glyph.is-shield {
+  color: var(--color-text);
+}
+
+.glyph.is-lock {
+  color: #fff;
+}
+
+/* — the sparkline — */
+
+.tile-graph .tile-drift {
+  display: grid;
+  gap: 8px;
+  padding: 13px 15px 15px;
+  border-radius: 18px;
+  background: #fff;
+  color: var(--color-text);
+  box-shadow: 0 24px 46px -26px color-mix(in srgb, var(--color-text) 60%, transparent);
+}
+
+.tile-graph svg {
+  width: 100%;
+  height: 30px;
+}
+
+/* ── the copy ─────────────────────────────────────────────────────────── */
+
 .hero-inner {
   position: relative;
+  z-index: 2;
   width: 100%;
-  max-width: var(--measure);
+  max-width: 1040px;
   margin-inline: auto;
-  padding: 132px var(--gutter);
-}
-
-.hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 16px 8px 10px;
-  border-radius: var(--pill);
-  background: color-mix(in srgb, var(--color-bg) 78%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
-  backdrop-filter: blur(10px);
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-}
-
-.hero-badge-dot {
-  position: relative;
-  display: block;
-  width: 9px;
-  height: 9px;
-  flex: none;
-  border-radius: var(--pill);
-  background: var(--color-accent);
+  /* The top pad clears the bar; everything else is a fraction of the viewport
+     height, so the block breathes on a tall screen and closes up on a short
+     one instead of running past the fold. */
+  padding: clamp(92px, 13svh, 148px) var(--gutter) clamp(52px, 9svh, 108px);
+  display: grid;
+  justify-items: center;
+  text-align: center;
 }
 
 .hero-title {
   font-family: var(--font-heading);
   font-weight: 900;
-  font-size: clamp(44px, 8.4vw, 122px);
-  line-height: 0.96;
-  letter-spacing: -0.045em;
-  margin-top: clamp(24px, 3.4vw, 40px);
+  /*
+   * Sized against the *shorter* of what the two axes allow.
+   *
+   * Width alone is not enough: on a landscape phone the width term is generous
+   * while there are only ~390px of height to put three lines of it in, and the
+   * hero grows past the fold. Taking the min means whichever axis is scarce is
+   * the one that sets the type.
+   *
+   * The 120 ceiling is a measure constraint — "Infrastructure" is the longest
+   * line and above 120 it filled the column to the pixel, so any font fallback
+   * or slightly narrower window wrapped it, and a wrapped line is *clipped*,
+   * because each line's mask is exactly one line tall. The 36 floor is the
+   * same constraint at the other end: below it the word stops fitting a 320px
+   * screen.
+   */
+  font-size: clamp(36px, min(8.6vw, 14svh), 120px);
+  line-height: 0.92;
+  letter-spacing: -0.05em;
   display: block;
+  max-width: 100%;
 }
 
 /* The mask is a real element, not a clip-path, so the type stays selectable
@@ -697,93 +1021,56 @@ body.nav-locked {
 .mask-line {
   display: block;
   overflow: hidden;
-  padding-bottom: 0.03em;
+  padding-bottom: 0.04em;
 }
 
 .mask-line > span {
   display: block;
 }
 
+/* TextMask's own wrapper is an unclassed inline span. Block-level lines inside
+   an inline box work, but only by accident of anonymous-box generation — this
+   makes the intent explicit. */
 .hero-title > span {
   display: block;
 }
 
-.hero-title-line {
-  display: flex;
-  align-items: center;
-  gap: clamp(12px, 2vw, 28px);
+/* The three lines step across the centre rather than sitting on one axis —
+   the same reason a stamp is set at an angle. Offsets are in `em`, so they
+   scale with the type instead of drifting apart at display sizes.
+
+   The offset goes on an inner span: the mask animation owns `transform` on
+   the line itself, and a second transform there would cancel the reveal. */
+.hero-step {
+  display: inline-block;
+}
+
+.hero-line-b .hero-step {
+  transform: translateX(0.11em);
+}
+
+.hero-line-c .hero-step {
+  transform: translateX(-0.07em);
 }
 
 .hero-accent {
   color: var(--color-accent);
 }
 
-.hero-ring {
-  display: block;
-  width: clamp(44px, 7vw, 96px);
-  height: clamp(44px, 7vw, 96px);
-  flex: none;
-  border-radius: var(--pill);
-  border: clamp(6px, 0.9vw, 12px) solid var(--color-accent);
-  animation: bobble 4.5s ease-in-out 1.4s infinite;
-}
-
-.hero-split {
-  display: grid;
-  grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
-  gap: 28px clamp(28px, 5vw, 72px);
-  align-items: end;
-  margin-top: clamp(28px, 3.4vw, 44px);
-}
-
 .hero-lede {
-  font-size: clamp(16px, 1.3vw, 19px);
-  line-height: 1.62;
-  max-width: 54ch;
-  color: color-mix(in srgb, var(--color-text) 82%, transparent);
+  font-size: clamp(15.5px, 1.22vw, 18px);
+  line-height: 1.6;
+  max-width: 46ch;
+  margin-top: clamp(18px, 3svh, 32px);
+  color: color-mix(in srgb, var(--color-text) 74%, transparent);
 }
 
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-}
-
-.hero-scroll {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 26px;
-  display: flex;
   justify-content: center;
-  pointer-events: none;
-}
-
-.hero-scroll-inner {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 9px 18px;
-  border-radius: var(--pill);
-  background: color-mix(in srgb, var(--color-bg) 70%, transparent);
-  backdrop-filter: blur(10px);
-  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
-  font-size: 12px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--color-text) 62%, transparent);
-}
-
-.hero-scroll-ring {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: var(--pill);
-  border: 1.5px solid color-mix(in srgb, var(--color-text) 25%, transparent);
-  font-size: 11px;
-  color: var(--color-accent);
-  animation: bobble 2.4s ease-in-out infinite;
+  gap: 10px;
+  margin-top: clamp(20px, 3.6svh, 38px);
 }
 
 /* ── buttons ──────────────────────────────────────────────────────────── */
@@ -852,6 +1139,39 @@ body.nav-locked {
 .btn-quiet:hover {
   color: var(--color-text);
   border-color: var(--color-accent);
+}
+
+/* The hero's primary. A wedge of accent is clipped into the trailing corner,
+   which is the whole reason it is a separate button: it needs the overflow
+   clip and a corner to cut, and no other button on the page does. */
+.btn-hero {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-text);
+  color: var(--color-neutral-100);
+  padding: 17px 30px;
+  font-size: 15.5px;
+  box-shadow: 0 20px 40px -20px color-mix(in srgb, var(--color-text) 80%, transparent);
+}
+
+.btn-hero:hover {
+  color: #fff;
+  background: var(--color-neutral-900);
+}
+
+.btn-wedge {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 34px;
+  height: 34px;
+  background: var(--color-accent);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  transition: transform 0.45s var(--ease-out);
+}
+
+.btn-hero:hover .btn-wedge {
+  transform: translate(-4px, -4px) scale(1.24);
 }
 
 .pill-link {
@@ -1044,10 +1364,10 @@ body.nav-locked {
   border-radius: var(--pill);
   background: radial-gradient(
     circle at 50% 50%,
-    color-mix(in srgb, var(--color-accent) 55%, transparent) 0%,
-    transparent 62%
+    color-mix(in srgb, var(--color-accent) 38%, transparent) 0%,
+    transparent 64%
   );
-  filter: blur(40px);
+  filter: blur(56px);
 }
 
 .pipeline-inner {
@@ -1103,19 +1423,37 @@ body.nav-locked {
   transform-origin: left center;
 }
 
+/*
+ * The five cards are stacked in a single grid cell rather than absolutely
+ * positioned.
+ *
+ * `position: absolute; inset: 0` fixed every card to the height of the box,
+ * so any card whose title wrapped to two lines pushed its own tag row out
+ * through the bottom edge and left the chips floating on the slab. As grid
+ * items sharing one cell they still overlap perfectly, but the cell is now as
+ * tall as the tallest card and nothing can escape it.
+ */
 .steps {
   position: relative;
+  display: grid;
+  grid-template-areas: "step";
   min-height: clamp(280px, 38vh, 400px);
 }
 
 .step {
-  position: absolute;
-  inset: 0;
+  grid-area: step;
+  align-self: stretch;
   border-radius: 32px;
   padding: clamp(24px, 3vw, 40px);
+  /* Frosted, not solid. The glow travelling behind the slab is meant to read
+     *through* the card — that colour shift is what makes the pinned section
+     feel like it is moving. It only turned muddy when the glow was strong
+     enough to fight the copy, which is a job for the glow's opacity, not for
+     painting over it. */
   background: color-mix(in srgb, var(--color-bg) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--color-bg) 16%, transparent);
   backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -1127,6 +1465,7 @@ body.nav-locked {
   color: #fff;
   border-color: transparent;
   backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .step-num {
@@ -1171,6 +1510,8 @@ body.nav-locked {
   border-radius: var(--pill);
   background: color-mix(in srgb, var(--color-bg) 14%, transparent);
   font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .step.is-accent .tagchip {
@@ -1221,10 +1562,20 @@ body.nav-locked {
   margin-bottom: 0;
 }
 
+/*
+ * Opaque is not optional here. `is-soft` used to be a 6% tint of the ink over
+ * nothing, so a card pinned on top of the accent card let the headline beneath
+ * read straight through it — two titles in the same place. Every variant now
+ * paints a solid ground, and the base declares one so a new variant that
+ * forgets to cannot reintroduce the bug.
+ */
 .stack-card {
   position: relative;
   border-radius: var(--radius-card-lg);
   overflow: hidden;
+  background: var(--color-bg);
+  isolation: isolate;
+  box-shadow: 0 30px 60px -40px color-mix(in srgb, var(--color-text) 55%, transparent);
   will-change: transform;
 }
 
@@ -1234,7 +1585,7 @@ body.nav-locked {
 }
 
 .stack-card.is-soft {
-  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+  background: color-mix(in srgb, var(--color-text) 6%, var(--color-bg));
 }
 
 .stack-card.is-accent {
@@ -1369,11 +1720,14 @@ body.nav-locked {
   color: color-mix(in srgb, var(--color-bg) 60%, transparent);
 }
 
+/* A paper card can land inside an ink or accent card, which sets a light text
+   colour on itself — so the mini card restates its own. */
 .mini-card {
   grid-column: span 4;
   border-radius: 24px;
   padding: 22px;
   background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .mini-title {
@@ -1737,16 +2091,6 @@ textarea.input {
    Motion layer — the styling the Motion components need in order to move.
    ══════════════════════════════════════════════════════════════════════════ */
 
-@keyframes bobble {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(9px);
-  }
-}
-
 /* Pointer-tracking wrapper. `inline-flex` so it never adds a line box of its
    own around the control it wraps. */
 .magnetic {
@@ -1840,6 +2184,37 @@ textarea.input {
     padding-block: 118px;
   }
 
+  /* Below the fan's own width there is no room beside the headline. Only the
+     four tiles marked `keep` survive, shrunk and re-placed into the corners —
+     the copy owns the middle of the screen outright. */
+  .hero-stage {
+    --tile-unit: clamp(84px, 15vw, 128px);
+  }
+
+  .tile:not([data-keep]) {
+    display: none;
+  }
+
+  .tile[data-tile="terraform"] {
+    left: 9%;
+    top: 13%;
+  }
+
+  .tile[data-tile="uptime"] {
+    left: 90%;
+    top: 12%;
+  }
+
+  .tile[data-tile="zero-trust"] {
+    left: 10%;
+    top: 85%;
+  }
+
+  .tile[data-tile="k3s"] {
+    left: 88%;
+    top: 82%;
+  }
+
   .stack-slot {
     position: static;
     margin-bottom: 20px;
@@ -1891,12 +2266,144 @@ textarea.input {
   }
 
   .hero-inner {
-    padding-block: 104px 96px;
+    padding-block: clamp(86px, 12svh, 120px) clamp(46px, 8svh, 84px);
   }
 
-  .contact-link {
+  .hero-stage {
+    --tile-unit: clamp(68px, 20vw, 104px);
+  }
+
+  /* A phone gets its own ratio. 8.6vw is tuned to leave a desktop fan room
+     beside the type; on a screen with no fan to make room for, the headline is
+     the whole hero and should fill it. Capped at 56 so it does not outgrow the
+     lede on a large phone. */
+  .hero-title {
+    font-size: clamp(34px, 11.5vw, 56px);
+  }
+}
+
+
+/* Landscape phones and short laptops: plenty of width, almost no height. The
+   hero is the only section that must fit a viewport exactly, so it is the only
+   one that gets a height breakpoint. */
+@media (max-height: 620px) and (orientation: landscape) {
+  .hero-inner {
+    padding-block: clamp(68px, 17svh, 96px) clamp(24px, 7svh, 48px);
+  }
+
+  .hero-title {
+    font-size: clamp(30px, min(7.4vw, 13svh), 96px);
+  }
+
+  .hero-lede {
+    font-size: 14px;
+    max-width: 52ch;
+    margin-top: 12px;
+  }
+
+  .hero-actions {
+    margin-top: 16px;
+  }
+
+  .btn-hero {
+    padding: 13px 24px;
     font-size: 14.5px;
-    padding: 15px 18px;
+  }
+
+  .hero-stage {
+    --tile-unit: clamp(54px, 13svh, 88px);
+  }
+
+  /* The copy stays wide while the screen gets short, so the two objects that
+     sit closest to it give way rather than crowd it. */
+  .tile[data-tile="cursor"] {
+    display: none;
+  }
+
+  .tile[data-tile="k3s"] {
+    left: 16%;
+  }
+
+  .tile[data-tile="actions"] {
+    left: 7%;
+  }
+}
+
+/*
+ * The compact cluster: any viewport where only the four `keep` tiles are left
+ * and there is no slack around the copy — a phone in either orientation.
+ *
+ * Two changes. The labelled cards collapse to bare chips, because at full
+ * height they are ~130px tall and a phone hero has nowhere near that much
+ * clear space above and below the text; the mark and the sub-line are the
+ * first things a reader at this size would not be reading anyway. And the four
+ * are anchored to the hero's own top and bottom edges rather than to a
+ * percentage of its height — that height follows the copy, so a percentage
+ * lands somewhere different on every device, while the edges are a stable
+ * reference for "clear of the text".
+ */
+@media (max-width: 620px), (max-width: 960px) and (max-height: 620px) and (orientation: landscape) {
+  .tile-card .tile-drift {
+    padding: 10px 13px;
+    border-radius: 14px;
+  }
+
+  .tile-card .tile-mark,
+  .tile-card .tile-sub,
+  .tile-toggle .tile-sub {
+    display: none;
+  }
+
+  .tile[data-keep] {
+    translate: -50% 0;
+  }
+
+  .tile[data-tile="terraform"] {
+    left: 12%;
+    top: 20px;
+  }
+
+  .tile[data-tile="uptime"] {
+    left: 87%;
+    top: 14px;
+  }
+
+  .tile[data-tile="zero-trust"] {
+    left: 12%;
+    top: auto;
+    bottom: 22px;
+  }
+
+  .tile[data-tile="k3s"] {
+    left: 87%;
+    top: auto;
+    bottom: 18px;
+  }
+}
+
+/* A phone held sideways is the tightest budget on the site. Everything shrinks
+   one more step so three lines of headline, the lede and the buttons still
+   land inside ~375px of height. */
+@media (max-width: 960px) and (max-height: 620px) and (orientation: landscape) {
+  .hero-inner {
+    padding-block: clamp(64px, 17svh, 92px) clamp(20px, 6svh, 40px);
+  }
+
+  .hero-title {
+    font-size: clamp(28px, min(9vw, 13svh), 72px);
+  }
+
+  .hero-lede {
+    font-size: 13.5px;
+    margin-top: 10px;
+  }
+
+  .hero-actions {
+    margin-top: 14px;
+  }
+
+  .hero-stage {
+    --tile-unit: clamp(56px, 9vw, 76px);
   }
 }
 
@@ -1918,8 +2425,10 @@ textarea.input {
     scroll-behavior: auto;
   }
 
-  .hero-ring,
-  .hero-scroll-ring {
+  /* The cluster keeps its arrangement — the arrangement is the content — but
+     stops moving on its own. */
+  .tile-drift,
+  .toggle-track i {
     animation: none;
   }
 
@@ -1949,12 +2458,13 @@ textarea.input {
 
   .steps {
     display: grid;
+    grid-template-areas: none;
     gap: 14px;
     min-height: 0;
   }
 
   .step {
-    position: static;
+    grid-area: auto;
     opacity: 1 !important;
     transform: none !important;
   }

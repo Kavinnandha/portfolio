@@ -4,7 +4,7 @@ import { useLenis } from "lenis/react";
 import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Magnetic from "./motion/Magnetic";
-import { EASE_IN_OUT } from "./motion/easing";
+import { EASE_IN_OUT, EASE_OUT } from "./motion/easing";
 
 const WORK_PANEL = [
   { title: "Moodle on k3s", sub: "1,000+ concurrent users, bare metal", tone: "" },
@@ -100,7 +100,15 @@ export default function SiteNav() {
 
   return (
     <>
-      <div className={`nav-wrap${condensed ? " is-condensed" : ""}`}>
+      {/* The wrapper drops in once on load; the full-bleed-to-pill morph is
+          pure CSS from `is-condensed`, so this entrance and that transition
+          never touch the same property. */}
+      <motion.div
+        className={`nav-wrap${condensed ? " is-condensed" : ""}`}
+        initial={reduced ? false : { y: -72, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: reduced ? 0 : 0.9, ease: EASE_OUT, delay: 0.1 }}
+      >
         <nav className={`nav${condensed ? " is-condensed" : ""}`} aria-label="Primary">
           <a className="nav-brand" href="#top" onClick={() => setDrawer(false)}>
             <motion.span className="nav-mark" style={{ rotate: markRotate }} aria-hidden="true" />
@@ -209,7 +217,7 @@ export default function SiteNav() {
             ))}
           </div>
         </nav>
-      </div>
+      </motion.div>
 
       {/* The canvas hides the link row below 960px and puts nothing in its
           place. This is that replacement, assembled from the same parts. */}

@@ -1,13 +1,12 @@
 import Image from "next/image";
-import { Fragment } from "react";
 import BackToTop from "@/components/BackToTop";
 import ContactForm from "@/components/ContactForm";
 import SiteNav from "@/components/SiteNav";
 import { CardStack, CardStackItem } from "@/components/motion/CardStack";
 import ContactSection from "@/components/motion/ContactSection";
 import Counter from "@/components/motion/Counter";
-import HeroBackdrop from "@/components/motion/HeroBackdrop";
 import HeroInner from "@/components/motion/HeroInner";
+import HeroStage from "@/components/motion/HeroStage";
 import Magnetic from "@/components/motion/Magnetic";
 import Marquee, { type Chip } from "@/components/motion/Marquee";
 import Parallax from "@/components/motion/Parallax";
@@ -152,63 +151,51 @@ export default function Home() {
 
       <main>
         <section id="top" className="hero">
-          <HeroBackdrop />
+          <span className="hero-wash" aria-hidden="true" />
           <span className="hero-noise" aria-hidden="true" />
+          <HeroStage />
 
           <HeroInner>
-            <Reveal delay={0.15} y={20}>
-              <span className="hero-badge">
-                <span className="hero-badge-dot" aria-hidden="true" />
-                Open to cloud &amp; platform roles — Coimbatore or remote
-              </span>
-            </Reveal>
-
             <h1 className="hero-title">
               <TextMask
-                delay={0.1}
-                stagger={0.12}
+                delay={0.12}
+                stagger={0.1}
                 lines={[
-                  "Infrastructure",
-                  "that stays",
-                  <Fragment key="boring">
-                    <span className="hero-accent">boring.</span>
-                    <span className="hero-ring" aria-hidden="true" />
-                  </Fragment>,
+                  <span className="hero-step" key="a">
+                    Infrastructure
+                  </span>,
+                  <span className="hero-step" key="b">
+                    that stays
+                  </span>,
+                  <span className="hero-step" key="c">
+                    boring.
+                  </span>,
                 ]}
-                lineClassNames={[undefined, undefined, "hero-title-line"]}
+                lineClassNames={["hero-line-a", "hero-line-b", "hero-line-c hero-accent"]}
               />
             </h1>
 
-            <div className="hero-split">
-              <Reveal delay={0.5} y={20}>
-                <p className="hero-lede">
-                  I&rsquo;m Kavin — a cloud and DevOps engineer running a bare-metal Kubernetes
-                  cluster for 1,000+ concurrent users, a self-hosted Zero Trust edge, and the
-                  pipelines that ship to both. Uptime is the product.
-                </p>
-              </Reveal>
+            <Reveal delay={0.6} y={18}>
+              <p className="hero-lede">
+                Bare-metal Kubernetes for 1,000+ concurrent users, a self-hosted Zero Trust edge and
+                the pipelines that ship to both — built so the interesting part is never the outage.
+              </p>
+            </Reveal>
 
-              <Reveal className="hero-actions" delay={0.62} y={20}>
-                <Magnetic>
-                  <a className="btn btn-ink" href="#work">
-                    See the work <span aria-hidden="true">↓</span>
-                  </a>
-                </Magnetic>
-                <Magnetic>
-                  <a className="btn btn-outline" href="mailto:kavinnandhakavin@gmail.com">
-                    Email me
-                  </a>
-                </Magnetic>
-              </Reveal>
-            </div>
+            <Reveal className="hero-actions" delay={0.72} y={18}>
+              <Magnetic>
+                <a className="btn btn-hero" href="#work">
+                  See the work
+                  <span className="btn-wedge" aria-hidden="true" />
+                </a>
+              </Magnetic>
+              <Magnetic>
+                <a className="btn btn-quiet" href="mailto:kavinnandhakavin@gmail.com">
+                  Email me
+                </a>
+              </Magnetic>
+            </Reveal>
           </HeroInner>
-
-          <div className="hero-scroll" aria-hidden="true">
-            <div className="hero-scroll-inner">
-              Scroll
-              <span className="hero-scroll-ring">↓</span>
-            </div>
-          </div>
         </section>
 
         <Marquee items={ticker} />

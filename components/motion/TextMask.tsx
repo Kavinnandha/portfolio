@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useInView, useReducedMotion } from "motion/react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { EASE_OUT } from "./easing";
 
 type TextMaskProps = {
@@ -58,20 +58,26 @@ export default function TextMask({
   return (
     <span ref={ref} className={className} data-motion="mask">
       {lines.map((line, i) => (
-        <span className="mask-line" key={i}>
-          <motion.span
-            className={lineClassNames?.[i]}
-            initial={{ y: hidden }}
-            animate={{ y: show ? "0%" : hidden }}
-            transition={{
-              duration: reduced ? 0 : 0.95,
-              ease: EASE_OUT,
-              delay: reduced ? 0 : delay + i * stagger,
-            }}
-          >
-            {line}
-          </motion.span>
-        </span>
+        <Fragment key={i}>
+          {/* A real space between lines. Each line is its own block box, so
+              nothing renders — but without it a screen reader runs the lines
+              together into one unbroken word. */}
+          {i > 0 ? " " : null}
+          <span className="mask-line">
+            <motion.span
+              className={lineClassNames?.[i]}
+              initial={{ y: hidden }}
+              animate={{ y: show ? "0%" : hidden }}
+              transition={{
+                duration: reduced ? 0 : 0.95,
+                ease: EASE_OUT,
+                delay: reduced ? 0 : delay + i * stagger,
+              }}
+            >
+              {line}
+            </motion.span>
+          </span>
+        </Fragment>
       ))}
     </span>
   );
