@@ -18,7 +18,7 @@ const description =
   "Kavin Nandha M K — cloud and DevOps engineer in Coimbatore. Bare-metal k3s serving 1,000+ concurrent users, a self-hosted Cloudflare Zero Trust edge, and the CI/CD that ships to both.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://kavinweb.info"),
+  metadataBase: new URL("https://kavin.codegarage.dev"),
   title: "Kavin Nandha M K — Cloud / DevOps engineer",
   description,
   keywords: [
@@ -30,10 +30,10 @@ export const metadata: Metadata = {
     "Cloudflare Zero Trust",
     "Coimbatore",
   ],
-  authors: [{ name: "Kavin Nandha M K", url: "https://kavinweb.info" }],
+  authors: [{ name: "Kavin Nandha M K", url: "https://kavin.codegarage.dev" }],
   openGraph: {
     type: "website",
-    url: "https://kavinweb.info",
+    url: "https://kavin.codegarage.dev",
     title: "Kavin Nandha M K — Cloud / DevOps engineer",
     description,
     siteName: "Kavin Nandha M K",

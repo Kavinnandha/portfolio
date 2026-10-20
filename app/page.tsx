@@ -19,7 +19,7 @@ const stats = [
   { to: 1000, suffix: "+", group: true, label: "Concurrent users on one k3s cluster" },
   { to: 128, group: false, label: "Threads of dual Xeon Gold, 256GB ECC, operated bare metal" },
   { to: 3, suffix: " yrs", group: false, label: "Running a self-hosted Linux and Zero Trust edge" },
-  { to: 2, group: false, label: "Hackathons won or placed, from 600+ entrants" },
+  { to: 2, group: false, label: "Competitions won or made the final, incl. Samsung Solve for Tomorrow" },
 ];
 
 const ticker = [
@@ -87,7 +87,7 @@ const toolkit = [
 const record = [
   {
     when: "Oct 2025 — Mar 2026",
-    title: "DevOps & SDE Intern — TeamMistake Technologies",
+    title: "DevOps Intern — TeamMistake Technologies",
     body: "CI/CD workflows, containerized deployments and infrastructure automation with Docker and GitHub Actions. Owned DNS, domain routing, SSL/TLS and Cloudflare traffic management for production services, and debugged deployment, certificate and networking failures across production and intranet environments. On the product side: Node.js and Express features from data model to rollout, MongoDB query optimization, and JWT-based RBAC built from scratch.",
   },
   {
@@ -98,7 +98,7 @@ const record = [
   {
     when: "2023 — 2027",
     title: "B.E. Computer Science & Engineering (Cyber Security)",
-    body: "Sri Shakthi Institute of Engineering and Technology, Coimbatore — CGPA 8.61/10. Certified in Claude Code in Action (Anthropic, 2026) and Intel Unnati Industrial Training (2025).",
+    body: "Sri Shakthi Institute of Engineering and Technology, Coimbatore — CGPA 8.61/10.",
   },
 ];
 
@@ -106,7 +106,7 @@ const contactLinks = [
   { href: "mailto:kavinnandhakavin@gmail.com", text: "kavinnandhakavin@gmail.com", label: "Email" },
   { href: "https://github.com/kavinnandha", text: "github.com/kavinnandha", label: "Code" },
   { href: "https://linkedin.com/in/kavinnandha", text: "linkedin.com/in/kavinnandha", label: "LinkedIn" },
-  { href: "https://kavinweb.info", text: "kavinweb.info", label: "Web" },
+  { href: "https://kavin.codegarage.dev", text: "kavin.codegarage.dev", label: "Web" },
   { href: "tel:+919345569707", text: "+91 93455 69707", label: "Phone" },
 ];
 
@@ -155,16 +155,6 @@ export default function Home() {
                   kavinnandhakavin@gmail.com
                 </a>
               </Magnetic>
-              <Magnetic strength={10}>
-                <a
-                  className="btn btn-ghost"
-                  href="https://kavinweb.info"
-                  target="_blank"
-                  rel="noopener"
-                >
-                  kavinweb.info
-                </a>
-              </Magnetic>
             </div>
           </div>
 
@@ -207,12 +197,12 @@ export default function Home() {
                 not on the figure: it is scrubbed as the portrait settles into
                 the middle of the viewport, so the image gains presence exactly
                 where it is being looked at. */}
-            <figure>
+            <figure className="about-figure">
               <Parallax className="figure-4x5" amount={7} desaturate>
                 <Image
                   src={portrait}
                   alt="Kavin Nandha M K"
-                  sizes="(max-width: 900px) 100vw, 40vw"
+                  sizes="240px"
                   placeholder="blur"
                   priority
                 />
@@ -247,10 +237,10 @@ export default function Home() {
         <section id="work" className="section">
           <Reveal className="section-head">
             <span className="kicker">Selected work</span>
-            <span className="meta">Six builds — infrastructure, backend, applied AI</span>
+            <span className="meta">Four builds — infrastructure, platform, backend</span>
           </Reveal>
 
-          <CardStack total={6}>
+          <CardStack total={4}>
             <CardStackItem index={0}>
               <div className="bento-index">
                 <span className="num">01</span>
@@ -307,40 +297,6 @@ export default function Home() {
             <CardStackItem index={3}>
               <div className="bento-index">
                 <span className="num">04</span>
-                <span className="cat">Applied AI · 24h build</span>
-              </div>
-              <h3 className="bento-h-md">MobilityX 2.0</h3>
-              <p className="bento-p">
-                A RAG chatbot, GRU and regression forecasting, and a Solidity trust layer, shipped
-                cross-platform in twenty-four hours. Runner-up and software track winner among 250+
-                participants.
-              </p>
-              <div className="bento-tags">
-                <span className="tag tag-neutral">RAG</span>
-                <span className="tag tag-neutral">React Native</span>
-                <span className="tag tag-neutral">Hardhat</span>
-              </div>
-            </CardStackItem>
-
-            <CardStackItem index={4}>
-              <div className="bento-index">
-                <span className="num">05</span>
-                <span className="cat">Infrastructure</span>
-              </div>
-              <h3 className="bento-h-md">Virtual Assessment Platform</h3>
-              <p className="bento-p">
-                Deployment and monitoring for concurrent online evaluations — backend communication
-                tuned for low latency, bottlenecks traced and cleared during live sessions.
-              </p>
-              <div className="bento-tags">
-                <span className="tag tag-neutral">Linux</span>
-                <span className="tag tag-neutral">Monitoring</span>
-              </div>
-            </CardStackItem>
-
-            <CardStackItem index={5}>
-              <div className="bento-index">
-                <span className="num">06</span>
                 <span className="cat">Multi-role · MySQL</span>
               </div>
               <h3 className="bento-h-md">Institution Management System</h3>
@@ -476,9 +432,22 @@ export default function Home() {
             <div>
               <span className="kicker-sm">Awards</span>
               <p>
-                MobilityX 2.0 (2025) — runner-up and software track winner, 250+ participants. SRCAS
-                2.0 (2025) — winner, 350+ participants. Presented an AI microlearning platform at TN
-                Startup Meet 2025.
+                Samsung Solve for Tomorrow (2026) — finalist. SRCAS 2.0 (2025) — winner, 350+
+                participants. Presented an AI microlearning platform at TN Startup Meet 2025.
+              </p>
+            </div>
+            <div>
+              <span className="kicker-sm">Certifications</span>
+              <p>
+                Claude Code in Action (Anthropic, 2026). Intel Unnati Industrial Training
+                (2025).{" "}
+                <a
+                  href="https://drive.google.com/drive/folders/1viOF_DzchI7ywIm3wC9opLuKJWxzGv4K"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  View certificates
+                </a>
               </p>
             </div>
           </Reveal>
