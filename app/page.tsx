@@ -193,12 +193,10 @@ export default function Home() {
             <span className="kicker" style={{ marginBottom: 14 }}>
               About
             </span>
-            {/* The black-and-white treatment lives on the Parallax frame here,
-                not on the figure: it is scrubbed as the portrait settles into
-                the middle of the viewport, so the image gains presence exactly
-                where it is being looked at. */}
+            {/* The portrait prints in full colour — the one photograph on the
+                page exempt from the black-and-white treatment. */}
             <figure className="about-figure">
-              <Parallax className="figure-4x5" amount={7} desaturate>
+              <Parallax className="figure-4x5" amount={7}>
                 <Image
                   src={portrait}
                   alt="Kavin Nandha M K"
