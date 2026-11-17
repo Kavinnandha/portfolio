@@ -13,13 +13,18 @@ import Parallax from "@/components/motion/Parallax";
 import { Reveal, RevealGroup, RevealItem, RuleDraw } from "@/components/motion/Reveal";
 import ScrollWords from "@/components/motion/ScrollWords";
 import TextMask from "@/components/motion/TextMask";
+import shotLmsEndpoint from "@/public/grafana/lms-endpoint.webp";
+import shotLmsMysql from "@/public/grafana/lms-mysql.webp";
+import shotLmsServer from "@/public/grafana/lms-server.webp";
+import shotCyberlab from "@/public/grafana/server-cyberlab.webp";
+import shotUser06 from "@/public/grafana/server-user-06.webp";
 import portrait from "@/public/portrait.webp";
 
 const stats = [
-  { to: 1000, suffix: "+", group: true, label: "Concurrent users on one k3s cluster" },
+  { to: 2500, suffix: "+", group: true, label: "Concurrent users at peak on a bare-metal k3s cluster" },
   { to: 128, group: false, label: "Threads of dual Xeon Gold, 256GB ECC, operated bare metal" },
   { to: 3, suffix: " yrs", group: false, label: "Running a self-hosted Linux and Zero Trust edge" },
-  { to: 2, group: false, label: "Competitions won or made the final, incl. Samsung Solve for Tomorrow" },
+  { to: 4, group: false, label: "Competitions won or made the final, incl. Samsung Solve for Tomorrow" },
 ];
 
 const ticker = [
@@ -36,17 +41,66 @@ const ticker = [
   "OpenWRT",
   "Tailscale",
   "Redis",
+  "MySQL",
   "MongoDB",
+  "Sophos",
+  "FortiGate",
+  "Synology NAS",
   "Linux",
 ];
 
 const caseSpec = [
-  ["Orchestration", "k3s, single-cluster multi-service"],
-  ["Compute", "2× Xeon Gold 6430 · 128 threads"],
-  ["Memory", "256GB ECC"],
+  ["Before", "One server, MySQL, serial jobs · fell over at ~400 users"],
+  ["Orchestration", "k3s · one server node + worker nodes"],
+  ["Server node", "2× Xeon Gold 6430 · 128 threads · 256GB ECC"],
+  ["Code grading", "CodeRunner / Jobe moved to separate machines"],
+  ["Database", "MySQL · connection limits and buffer pool tuned"],
   ["Storage / network", "Hardware RAID · dual 10GbE"],
+  ["Backups", "Compressed, incremental · 40TB Synology NAS"],
   ["Observability", "Prometheus · Grafana · cAdvisor · Node Exporter"],
-  ["Load held", "1,000+ concurrent users"],
+  ["Load held", "2,500+ concurrent users at peak"],
+];
+
+const monitoringShots = [
+  {
+    src: shotLmsMysql,
+    href: "/grafana/lms-mysql.webp",
+    caption: "LMS MySQL · queries, threads, connections",
+    alt: "Grafana dashboard for the Moodle MySQL database: status, uptime, connections, queries per second, threads and network throughput over seven days",
+  },
+  {
+    src: shotLmsEndpoint,
+    href: "/grafana/lms-endpoint.webp",
+    caption: "LMS endpoint · Blackbox uptime and latency",
+    alt: "Grafana Blackbox Exporter dashboard for the LMS endpoint: status, HTTP code, response time, availability and latency by phase",
+  },
+  {
+    src: shotUser06,
+    href: "/grafana/server-user-06.webp",
+    caption: "Server node user-06 · 48 threads, 128GB",
+    alt: "Grafana Node Exporter dashboard for the user-06 server: CPU, memory, network and disk over seven days",
+  },
+  {
+    src: shotCyberlab,
+    href: "/grafana/server-cyberlab.webp",
+    caption: "Cyber security lab server",
+    alt: "Grafana Node Exporter dashboard for the cyber security lab server: CPU, memory, network and disk over seven days",
+  },
+];
+
+const incidents = [
+  {
+    title: "The database ran out of connections",
+    body: "At peak, MySQL hit its connection limit and logins failed with “Too many connections”, or queries slowed to a crawl. I raised max_connections and tuned the InnoDB buffer pool, and moving compilation off the database server in the k3s rebuild took the rest of the pressure off.",
+  },
+  {
+    title: "PHP-FPM workers hung and took the site down",
+    body: "The PHP-FPM pool reached its worker limit and some workers hung indefinitely. Once every worker was stuck, the site stayed unreachable until the service restarted. The lasting fix was to detect and kill unresponsive workers before they could exhaust the pool, alongside other pool changes.",
+  },
+  {
+    title: "Backups filled the disk",
+    body: "A cron job dumped the Moodle database and copied it to another machine, but the dumps were uncompressed. As the data grew the disk ran out and the backup job crashed. I compressed the dumps (about 70% smaller), switched to incremental backups, and moved every backup to a dedicated 40TB Synology NAS. Servers now keep only a few days locally; the NAS holds the history, including the CTF server and institute backups.",
+  },
 ];
 
 const toolkit = [
@@ -72,15 +126,19 @@ const toolkit = [
   },
   {
     title: "Security & access",
-    body: "Cloudflare Zero Trust, identity-based authentication, JWT and RBAC, firewall management, SSL/TLS configuration.",
+    body: "Cloudflare Zero Trust, identity-based authentication, JWT and RBAC, firewall management, SSL/TLS, CIS Benchmarks and system hardening.",
+  },
+  {
+    title: "Firewalls & hardware",
+    body: "Sophos, Fortinet FortiGate 60F, MikroTik and Ubiquiti; Lenovo ThinkSystem servers, hardware RAID, Synology NAS backups.",
   },
   {
     title: "Languages",
-    body: "Python, Bash, TypeScript, JavaScript, Java — plus Node.js and Express on the backend side.",
+    body: "Python, Bash, PowerShell, SQL, TypeScript, JavaScript — plus Node.js, Express and FastAPI on the backend side.",
   },
   {
     title: "Data",
-    body: "MongoDB schema design and query optimization, MySQL, Redis caching.",
+    body: "MySQL, PostgreSQL, MongoDB schema design and query optimization, Redis caching, compressed and incremental backups.",
   },
 ];
 
@@ -91,6 +149,11 @@ const record = [
     body: "CI/CD workflows, containerized deployments and infrastructure automation with Docker and GitHub Actions. Owned DNS, domain routing, SSL/TLS and Cloudflare traffic management for production services, and debugged deployment, certificate and networking failures across production and intranet environments. On the product side: Node.js and Express features from data model to rollout, MongoDB query optimization, and JWT-based RBAC built from scratch.",
   },
   {
+    when: "2025 — mid 2026",
+    title: "College infrastructure & IT operations — Sri Shakthi Institute",
+    body: "Ran the college's entire firewall and network alongside my studies: Sophos firewalls, Fortinet FortiGate 60F for the cyber security labs, MikroTik and Ubiquiti routers and access points. Operated the Lenovo ThinkSystem servers behind the Moodle k3s cluster and the 40TB Synology NAS that holds institute backups. In all, worked on the infrastructure of three institutions — managed one end to end, supported two.",
+  },
+  {
     when: "2023 — present",
     title: "Independent infrastructure & homelab engineer",
     body: "A self-hosted Linux environment with Cloudflare Tunnel and Tailscale access, Zero Trust identity policies, OpenWRT networking, edge functions on Workers, and full container-level observability. Everything documented, everything reproducible.",
@@ -98,7 +161,7 @@ const record = [
   {
     when: "2023 — 2027",
     title: "B.E. Computer Science & Engineering (Cyber Security)",
-    body: "Sri Shakthi Institute of Engineering and Technology, Coimbatore — CGPA 8.61/10.",
+    body: "Sri Shakthi Institute of Engineering and Technology, Coimbatore — CGPA 8.67/10.",
   },
 ];
 
@@ -108,6 +171,30 @@ const contactLinks = [
   { href: "https://linkedin.com/in/kavinnandha", text: "linkedin.com/in/kavinnandha", label: "LinkedIn" },
   { href: "https://kavin.codegarage.dev", text: "kavin.codegarage.dev", label: "Web" },
   { href: "tel:+919345569707", text: "+91 93455 69707", label: "Phone" },
+  { href: "/Kavin_Nandha_MK_Resume_DevOps.pdf", text: "Download résumé (PDF)", label: "CV" },
+];
+
+const publications = [
+  {
+    title: "Sentinel AI: Cyber Bully Detection and Prevention",
+    venue: "JRANNS, Vol. 2 Issue 2, April 2026",
+    href: "http://hbrppublication.com/OJS/index.php/JRANNS/article/view/9606",
+  },
+  {
+    title:
+      "Cellular Maze: A Cellular Network-Aware Routing System Using Machine Learning-Based Signal Quality Prediction",
+    venue: "IJRTI, Vol. 11 Issue 10, October 2026",
+  },
+  {
+    title: "Reinforcement Learning-Based Content Triage Agent for Intelligent Social Media Moderation",
+    venue: "First author",
+  },
+  {
+    title:
+      "Automated CIS Benchmark Auditing and Remediation Tool: A Windows System Security Assessment Solution",
+    venue: "IEEE",
+  },
+  { title: "Smart Health Monitoring and Recommendation System", venue: "IRJMETS" },
 ];
 
 export default function Home() {
@@ -123,7 +210,7 @@ export default function Home() {
             <div className="hero-eyebrow">
               <span className="hero-dot" />
               <span>Cloud / DevOps engineer</span>
-              <span className="hero-place">Coimbatore, IN</span>
+              <span className="hero-place">India · Open to relocation</span>
             </div>
 
             <h1 className="hero-title">
@@ -138,7 +225,7 @@ export default function Home() {
             </h1>
 
             <p className="hero-lede">
-              I run a bare-metal Kubernetes (k3s) cluster serving 1,000+ concurrent users, a
+              I run a bare-metal Kubernetes (k3s) cluster serving 2,500+ concurrent users at peak, a
               self-hosted Cloudflare Zero Trust edge, and the CI/CD that ships to both. Container
               orchestration, DNS and SSL, networking, observability — I own the whole path from commit
               to production.
@@ -155,6 +242,11 @@ export default function Home() {
                   kavinnandhakavin@gmail.com
                 </a>
               </Magnetic>
+              <Magnetic>
+                <a className="btn btn-secondary" href="/Kavin_Nandha_MK_Resume_DevOps.pdf" download>
+                  Résumé (PDF)
+                </a>
+              </Magnetic>
             </div>
           </div>
 
@@ -163,7 +255,7 @@ export default function Home() {
               <span>Scroll</span>
               <span className="scrollpulse" />
             </div>
-            <span className="hero-load">k3s · 1,000+ concurrent</span>
+            <span className="hero-load">k3s · 2,500+ concurrent at peak</span>
           </div>
         </HeroStage>
 
@@ -215,6 +307,8 @@ export default function Home() {
               and Technology, Coimbatore — and, since 2023, the person who keeps a
               homelab-turned-production environment alive: Cloudflare Tunnel and Tailscale for access,
               OpenWRT for the network, Prometheus and Grafana for the truth about what is happening.
+              For about 16 months I also ran my college&rsquo;s entire firewall and network, including
+              the servers behind its Moodle platform.
             </p>
             <p className="body about-body">
               At TeamMistake Technologies I worked both sides of the line — Dockerized CI/CD, DNS,
@@ -225,7 +319,7 @@ export default function Home() {
             <ScrollWords
               as="blockquote"
               className="pullquote"
-              text="Deploys are easy. Staying up under 1,000 people at once is the engineering."
+              text="Deploys are easy. Staying up under 2,500 people at once is the engineering."
             />
           </div>
         </Reveal>
@@ -235,10 +329,10 @@ export default function Home() {
         <section id="work" className="section">
           <Reveal className="section-head">
             <span className="kicker">Selected work</span>
-            <span className="meta">Four builds — infrastructure, platform, backend</span>
+            <span className="meta">Seven builds — infrastructure, platform, security</span>
           </Reveal>
 
-          <CardStack total={4}>
+          <CardStack total={7}>
             <CardStackItem index={0}>
               <div className="bento-index">
                 <span className="num">01</span>
@@ -246,9 +340,9 @@ export default function Home() {
               </div>
               <h3 className="bento-h-lg">Moodle LMS on a bare-metal k3s cluster</h3>
               <p className="bento-p-lg">
-                A production learning platform with CodeRunner/Jobe grading services on dual Intel Xeon
-                Gold 6430 servers, holding steady through real classroom load of 1,000+ concurrent
-                users.
+                The college LMS used to fall over at about 400 users. I moved it to a k3s cluster, split
+                CodeRunner/Jobe grading onto separate machines and tuned MySQL for the load. It now
+                holds 2,500+ concurrent users at peak.
               </p>
               <div className="bento-tags wide">
                 <span className="tag tag-outline">k3s</span>
@@ -276,6 +370,26 @@ export default function Home() {
             <CardStackItem index={2}>
               <div className="bento-index">
                 <span className="num">03</span>
+                <span className="cat">Platform · Samsung Top 5</span>
+              </div>
+              <h3 className="bento-h-md">MicroLearning</h3>
+              <p className="bento-p">
+                WhatsApp training for factory workers in 15 Indian languages. Multi-tenant FastAPI
+                backend shipped with Docker Compose and GitHub Actions CI/CD (214 backend tests),
+                exposed through a Cloudflare Tunnel. Top 5 in the AI Living category of Samsung Solve
+                for Tomorrow 2026.
+              </p>
+              <div className="bento-tags">
+                <span className="tag tag-neutral">Docker Compose</span>
+                <span className="tag tag-neutral">GitHub Actions</span>
+                <span className="tag tag-neutral">Cloudflare Tunnel</span>
+                <span className="tag tag-neutral">FastAPI</span>
+              </div>
+            </CardStackItem>
+
+            <CardStackItem index={3}>
+              <div className="bento-index">
+                <span className="num">04</span>
                 <span className="cat">Platform</span>
               </div>
               <h3 className="bento-h-md">HR Connect</h3>
@@ -292,9 +406,39 @@ export default function Home() {
               </div>
             </CardStackItem>
 
-            <CardStackItem index={3}>
+            <CardStackItem index={4} className="invert">
               <div className="bento-index">
-                <span className="num">04</span>
+                <span className="num">05</span>
+                <span className="cat">Live traffic · payments</span>
+              </div>
+              <h3 className="bento-h-md">College tech-event platform</h3>
+              <p className="bento-p">
+                Ran the event-management application and its whole technical side for the
+                college&rsquo;s tech events: 1,000+ concurrent users, with the PhonePe payment gateway
+                handling registrations against a fixed launch date.
+              </p>
+            </CardStackItem>
+
+            <CardStackItem index={5}>
+              <div className="bento-index">
+                <span className="num">06</span>
+                <span className="cat">Security automation · IEEE</span>
+              </div>
+              <h3 className="bento-h-md">CIS Benchmark auditing and remediation</h3>
+              <p className="bento-p">
+                Python, PowerShell and Bash tooling that audits Windows and Linux systems against CIS
+                Benchmarks, reports compliance gaps and automates the fixes. Published as an IEEE paper.
+              </p>
+              <div className="bento-tags">
+                <span className="tag tag-neutral">Python</span>
+                <span className="tag tag-neutral">PowerShell</span>
+                <span className="tag tag-neutral">Bash</span>
+              </div>
+            </CardStackItem>
+
+            <CardStackItem index={6}>
+              <div className="bento-index">
+                <span className="num">07</span>
                 <span className="cat">Multi-role · MySQL</span>
               </div>
               <h3 className="bento-h-md">Institution Management System</h3>
@@ -324,35 +468,64 @@ export default function Home() {
             <RevealItem className="case-cell">
               <span className="kicker-sm">Problem</span>
               <p>
-                An entire institution&rsquo;s coursework, quizzes and automated code grading had to run
-                on hardware in the building — not a managed cloud — and survive a thousand students
-                logging in at the same minute.
+                Moodle ran on a single bare-metal server with MySQL. At about 400 concurrent users it
+                crashed: code compilation and other heavy work ran one job at a time, with nothing in
+                parallel.
+              </p>
+            </RevealItem>
+            <RevealItem className="case-cell">
+              <span className="kicker-sm">Decision</span>
+              <p>
+                Full Kubernetes was overkill for one application and would have eaten resources of its
+                own. k3s gave the same orchestration in a lightweight package that fit the job.
               </p>
             </RevealItem>
             <RevealItem className="case-cell">
               <span className="kicker-sm">Approach</span>
               <p>
-                A k3s cluster on dual Xeon Gold 6430 servers, hardware RAID and dual 10GbE. Moodle,
-                CodeRunner and Jobe split into a containerized service topology with ingress routing
-                and managed secrets, then Prometheus, Grafana, cAdvisor and Node Exporter wired in
-                before the first class, not after the first outage.
+                One machine as the k3s server node, the others as workers. CodeRunner/Jobe compilation
+                moved to separate machines so grading runs in parallel and can&rsquo;t starve the pages.
+                MySQL tuned for the load, and Prometheus, Grafana, cAdvisor and Node Exporter wired in
+                before go-live.
               </p>
             </RevealItem>
             <RevealItem className="case-cell">
               <span className="kicker-sm">Outcome</span>
               <p>
-                1,000+ concurrent users held through peak sessions. Metrics drove scheduling and
-                resource allocation decisions instead of guesswork, and grading workloads stayed
-                isolated from the platform serving the pages.
+                From falling over at about 400 users to 2,500+ concurrent at peak. The lesson I keep:
+                Kubernetes is not automatic high availability, and a single server node is still a
+                single point of failure.
               </p>
             </RevealItem>
           </RevealGroup>
 
+          <Reveal className="section-head" style={{ marginTop: 72, marginBottom: 0 }}>
+            <span className="kicker">What broke, and what I changed</span>
+            <span className="meta">Three incidents</span>
+          </Reveal>
+
+          <RevealGroup className="case-grid" stagger={0.1}>
+            {incidents.map((i) => (
+              <RevealItem key={i.title} className="case-cell">
+                <span className="kicker-sm">{i.title}</span>
+                <p>{i.body}</p>
+              </RevealItem>
+            ))}
+          </RevealGroup>
+
           <div className="split split-case">
-            {/* Drop a Grafana board or rack photo at public/case-shot.webp and swap
-                this placeholder for the same <Image> treatment as the portrait. */}
-            <figure className="grayscale split-figure case-figure">
-              <div className="figure-16x10 figure-empty">Grafana · cluster overview</div>
+            <figure className="split-figure case-figure">
+              <a href="/grafana/lms-server.webp" target="_blank" rel="noopener" className="figure-shot">
+                <Image
+                  src={shotLmsServer}
+                  alt="Grafana Node Exporter dashboard for the Moodle server over seven days: CPU, memory, network and disk"
+                  sizes="(max-width: 900px) 100vw, 60vw"
+                  placeholder="blur"
+                />
+              </a>
+              <figcaption className="figure-caption">
+                Grafana · Moodle server node (sietlms), last 7 days
+              </figcaption>
             </figure>
 
             <div className="case-spec">
@@ -368,6 +541,22 @@ export default function Home() {
               </table>
             </div>
           </div>
+
+          <Reveal className="section-head" style={{ marginTop: 72 }}>
+            <span className="kicker">Monitoring, across every server</span>
+            <span className="meta">Prometheus · Grafana · Blackbox</span>
+          </Reveal>
+
+          <RevealGroup className="shot-grid" stagger={0.08}>
+            {monitoringShots.map((s) => (
+              <RevealItem key={s.href} as="figure" className="shot-item">
+                <a href={s.href} target="_blank" rel="noopener" className="figure-shot">
+                  <Image src={s.src} alt={s.alt} sizes="(max-width: 900px) 100vw, 50vw" placeholder="blur" />
+                </a>
+                <figcaption className="figure-caption">{s.caption}</figcaption>
+              </RevealItem>
+            ))}
+          </RevealGroup>
         </section>
 
         <Divider />
@@ -412,35 +601,42 @@ export default function Home() {
           </RevealGroup>
 
           <Reveal className="record-extra">
-            <div>
-              <span className="kicker-sm">Publication</span>
-              <p>
-                Sentinel AI: Cyber Bully Detection and Prevention —{" "}
-                <em>Journal of Research in Artificial Neural Network Systems</em>, Vol. 2, No. 2, pp.
-                1–5, April 2026.{" "}
-                <a
-                  href="http://hbrppublication.com/OJS/index.php/JRANNS/article/view/9606"
-                  target="_blank"
-                  rel="noopener"
-                >
-                  Read it
-                </a>
-              </p>
+            <div className="record-extra-wide">
+              <span className="kicker-sm">Publications</span>
+              <ul className="pub-list">
+                {publications.map((p) => (
+                  <li key={p.title}>
+                    {p.title} — <em>{p.venue}</em>.
+                    {p.href ? (
+                      <>
+                        {" "}
+                        <a href={p.href} target="_blank" rel="noopener">
+                          Read it
+                        </a>
+                      </>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
             </div>
             <div>
               <span className="kicker-sm">Awards</span>
               <p>
-                Samsung Solve for Tomorrow (2026) — finalist. SRCAS 2.0 (2025) — winner, 350+
-                participants. Presented an AI microlearning platform at TN Startup Meet 2025.
+                Samsung Solve for Tomorrow 2026 — Top 5 in the AI Living category, one of 20 national
+                finalists. SRCAS 2.0 (2025) — winner, 350+ participants. MobilityX 2.0, IEEE VTS
+                (2025) — runner-up and Software Track winner, 250+ participants. MAHE Mobility
+                Challenge 2026 — AI Track finalist. Presented an AI microlearning platform at TN
+                Startup Meet 2025.
               </p>
             </div>
             <div>
               <span className="kicker-sm">Certifications</span>
               <p>
-                Claude Code in Action (Anthropic, 2026). Intel Unnati Industrial Training
-                (2025).{" "}
+                Claude Code in Action (Anthropic, 2026). AWS Cloud Practitioner Essentials (AWS Skill
+                Builder, 2026). NPTEL Demystifying Networking (2026). Aspire Leaders Program (2026).
+                Intel Unnati Industrial Training (2025).{" "}
                 <a
-                  href="https://drive.google.com/drive/folders/1viOF_DzchI7ywIm3wC9opLuKJWxzGv4K"
+                  href="https://drive.google.com/drive/folders/1LxJ57Xye420axeNnlkJy1O5LkC5YRG9I?usp=sharing"
                   target="_blank"
                   rel="noopener"
                 >
@@ -485,7 +681,7 @@ export default function Home() {
       </main>
 
       <footer className="footer">
-        <span>Kavin Nandha M K — Cloud / DevOps engineer, Coimbatore</span>
+        <span>Kavin Nandha M K — Cloud / DevOps engineer, India</span>
         <BackToTop />
       </footer>
     </>

@@ -15,7 +15,7 @@ const archivo = Archivo({
 });
 
 const description =
-  "Kavin Nandha M K — cloud and DevOps engineer in Coimbatore. Bare-metal k3s serving 1,000+ concurrent users, a self-hosted Cloudflare Zero Trust edge, and the CI/CD that ships to both.";
+  "Kavin Nandha M K — cloud and DevOps engineer, India. Bare-metal k3s serving 2,500+ concurrent users at peak, a college firewall and network run for 16 months, a self-hosted Cloudflare Zero Trust edge, and the CI/CD that ships to them.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://kavin.codegarage.dev"),
@@ -28,7 +28,8 @@ export const metadata: Metadata = {
     "Kubernetes",
     "k3s",
     "Cloudflare Zero Trust",
-    "Coimbatore",
+    "Prometheus",
+    "Grafana",
   ],
   authors: [{ name: "Kavin Nandha M K", url: "https://kavin.codegarage.dev" }],
   openGraph: {
